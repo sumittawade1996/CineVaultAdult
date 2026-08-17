@@ -1,0 +1,25 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Vite's build output hashes filenames (e.g. index-AIB3pHt8.js) — the
+# content of a given hashed filename never changes, so it's safe for
+# browsers to cache these forever. This makes repeat visits load
+# instantly for anything that hasn't actually changed.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html references the current hashed asset filenames, so it must
+# always be re-fetched — otherwise visitors could get a stale index.html
+# pointing at assets that no longer exist after a new deploy.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
