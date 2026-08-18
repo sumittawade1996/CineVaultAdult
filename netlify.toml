@@ -3,6 +3,11 @@
   publish = "dist"
 
 [[redirects]]
+  from = "/video/*"
+  to = "/movies/:splat"
+  status = 301
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
