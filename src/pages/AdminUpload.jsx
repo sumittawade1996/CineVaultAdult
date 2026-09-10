@@ -3,6 +3,7 @@ import Papa from 'papaparse'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
+import { getPosterUrl } from '../lib/poster'
 import Seo from '../components/Seo'
 
 // Expected CSV headers (see /sample-data/movies-template.csv):
@@ -45,7 +46,7 @@ export default function AdminUpload() {
         title: row.title.trim(),
         slug: slugify(row.title),
         year: row.year ? Number(row.year) : null,
-        poster_url: row.poster_url?.trim() || null,
+        poster_url: row.poster_url?.trim() || getPosterUrl({ trailer_url: row.trailer_url?.trim() }),
         trailer_url: row.trailer_url?.trim() || null,
         description: row.description?.trim() || null,
         keywords: row.keywords?.trim() || null,

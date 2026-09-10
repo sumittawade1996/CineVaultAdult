@@ -1,48 +1,58 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PosterPlaceholder from './PosterPlaceholder'
-import { toEmbedUrl } from '../lib/video'
+import { getPosterUrl } from '../lib/poster'
 
-export default function MovieCard({ movie }) {
+// `priority` marks above-the-fold cards: those posters load eagerly (the
+// very first one with fetchpriority=high) so the grid's LCP image isn't
+// held back by lazy-loading. Everything else stays lazy.
+export default function MovieCard({ movie, priority = false, first = false, headingLevel = 'h3' }) {
+  const Heading = headingLevel
+  const [imgFailed, setImgFailed] = useState(false)
+  const poster = imgFailed ? null : getPosterUrl(movie)
+
   const tags = (movie.tags || '')
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean)
-    .slice(0, 3)
+    .slice(0, 2)
 
-  const embedUrl = !movie.poster_url ? toEmbedUrl(movie.trailer_url) : null
+  const meta = [movie.year, movie.runtime_minutes ? `${movie.runtime_minutes} min` : null].filter(Boolean)
 
   return (
-    <Link to={`/movie/${movie.slug}`} className="ticket-card">
-      <div className="ticket-poster">
-        {movie.poster_url ? (
-          <img src={movie.poster_url} alt={`${movie.title} poster`} loading="lazy" width="420" height="240" />
-        ) : embedUrl ? (
-          <iframe
-            className="ticket-poster-video"
-            src={embedUrl}
-            title={`${movie.title} trailer preview`}
-            loading="lazy"
-            frameBorder="0"
-            allow="encrypted-media; picture-in-picture"
-            tabIndex={-1}
+    <Link to={`/movie/${movie.slug}`} className="movie-card">
+      <div className="movie-poster">
+        {poster ? (
+          <img
+            src={poster}
+            alt=""
+            width="640"
+            height="360"
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchpriority={first ? 'high' : undefined}
+            onError={() => setImgFailed(true)}
           />
         ) : (
           <PosterPlaceholder title={movie.title} />
         )}
-        {movie.rating != null && <span className="ticket-rating">★ {movie.rating}</span>}
-        {movie.channel && <span className="ticket-channel">{movie.channel}</span>}
+        {movie.rating != null && (
+          <span className="badge badge-rating" aria-label={`Rated ${movie.rating} out of 10`}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" />
+            </svg>
+            {movie.rating}
+          </span>
+        )}
+        {movie.channel && <span className="badge badge-channel">{movie.channel}</span>}
       </div>
-      <div className="ticket-perf" />
-      <div className="ticket-info">
-        <h3>{movie.title}</h3>
-        <div className="ticket-meta">
-          {movie.year && <span>{movie.year}</span>}
-          {movie.runtime_minutes && <span>{movie.runtime_minutes}m</span>}
-        </div>
+      <div className="movie-body">
+        <Heading className="movie-title">{movie.title}</Heading>
+        {meta.length > 0 && <p className="movie-meta">{meta.join(' · ')}</p>}
         {tags.length > 0 && (
-          <div className="ticket-tags">
+          <div className="chip-row" aria-hidden="true">
             {tags.map((t) => (
-              <span className="tag-chip" key={t}>{t}</span>
+              <span className="chip" key={t}>{t}</span>
             ))}
           </div>
         )}

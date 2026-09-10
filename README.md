@@ -50,6 +50,20 @@ existing rows.
 - Upload the CSV. Re-uploading the same file updates existing movies
   instead of duplicating them (matched by title → slug).
 
+### Posters vs. players on movie cards
+
+Movie cards in every grid show a **static poster image**, never the trailer
+player itself — embedding twenty third-party players on `/movies` was the
+single biggest performance cost on the site. Set `poster_url` whenever you
+add a movie:
+
+- YouTube trailers get a thumbnail automatically when `poster_url` is empty.
+- Eporner embeds can be filled in bulk with
+  `node scripts/backfill-posters.mjs` (dry run) and
+  `node scripts/backfill-posters.mjs --apply` (writes `poster_url`).
+- Anything else (Luluvdo, RedTube, …) shows the branded placeholder until
+  you paste a poster URL in `/admin/movie`.
+
 ## 4. Write articles
 
 Go to `/admin/article` to publish a blog-style post with its own SEO title/

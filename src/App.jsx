@@ -5,12 +5,12 @@ import Footer from './components/Footer'
 import AdSlot from './components/AdSlot'
 import RequireAdmin from './components/RequireAdmin'
 import Home from './pages/Home'
+import Movies from './pages/Movies'
 
-// Route-level code splitting: everything except the homepage (the most
-// common landing page) is only downloaded when the visitor actually
-// navigates there, which keeps the initial bundle — and first paint —
-// small.
-const Movies = lazy(() => import('./pages/Movies'))
+// Route-level code splitting: the two main landing pages (home and
+// /movies) ship in the initial bundle so a deep link to /movies doesn't
+// pay an extra round-trip before it can fetch data; everything else is
+// downloaded on first visit.
 const MovieDetail = lazy(() => import('./pages/MovieDetail'))
 const Articles = lazy(() => import('./pages/Articles'))
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'))
@@ -41,25 +41,27 @@ export default function App() {
           <AdSlot slot="header" />
         </div>
       )}
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/movies" element={<Movies />} />
-          <Route path="/movie/:slug" element={<MovieDetail />} />
-          <Route path="/articles" element={<Articles />} />
-          <Route path="/article/:slug" element={<ArticleDetail />} />
-          <Route path="/actors" element={<Actors />} />
-          <Route path="/actor/:slug" element={<ActorDetail />} />
-          <Route path="/channels" element={<Channels />} />
-          <Route path="/channel/:slug" element={<ChannelDetail />} />
-          <Route path="/categories" element={<Categories />} />
-          <Route path="/category/:slug" element={<CategoryDetail />} />
-          <Route path="/admin/upload" element={<RequireAdmin><AdminUpload /></RequireAdmin>} />
-          <Route path="/admin/article" element={<RequireAdmin><AdminArticle /></RequireAdmin>} />
-          <Route path="/admin/movie" element={<RequireAdmin><AdminMovie /></RequireAdmin>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+      <main id="main">
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/movies" element={<Movies />} />
+            <Route path="/movie/:slug" element={<MovieDetail />} />
+            <Route path="/articles" element={<Articles />} />
+            <Route path="/article/:slug" element={<ArticleDetail />} />
+            <Route path="/actors" element={<Actors />} />
+            <Route path="/actor/:slug" element={<ActorDetail />} />
+            <Route path="/channels" element={<Channels />} />
+            <Route path="/channel/:slug" element={<ChannelDetail />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/category/:slug" element={<CategoryDetail />} />
+            <Route path="/admin/upload" element={<RequireAdmin><AdminUpload /></RequireAdmin>} />
+            <Route path="/admin/article" element={<RequireAdmin><AdminArticle /></RequireAdmin>} />
+            <Route path="/admin/movie" element={<RequireAdmin><AdminMovie /></RequireAdmin>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </main>
       {!isAdmin && (
         <div className="container">
           <AdSlot slot="footer" />

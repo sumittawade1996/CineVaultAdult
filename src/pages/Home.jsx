@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import MovieCard from '../components/MovieCard'
+import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import MovieGrid from '../components/MovieGrid'
 import AdSlot from '../components/AdSlot'
 import Seo from '../components/Seo'
@@ -38,25 +38,28 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
       const [{ data: feat }, { data: lat }, { data: arts }] = await Promise.all([
-        supabase.from('movies').select('*').eq('featured', true).limit(6),
-        supabase.from('movies').select('*').order('created_at', { ascending: false }).limit(12),
-        supabase.from('articles').select('*').eq('published', true).order('created_at', { ascending: false }).limit(3),
+        supabase.from('movies').select(MOVIE_CARD_FIELDS).eq('featured', true).order('created_at', { ascending: false }).limit(6),
+        supabase.from('movies').select(MOVIE_CARD_FIELDS).order('created_at', { ascending: false }).limit(12),
+        supabase.from('articles').select('id, slug, title, excerpt, cover_image_url').eq('published', true).order('created_at', { ascending: false }).limit(3),
       ])
+      if (cancelled) return
       setFeatured(feat || [])
       setLatest(lat || [])
       setArticles(arts || [])
       setLoading(false)
     }
     load()
+    return () => { cancelled = true }
   }, [])
 
   return (
     <>
       <Seo
         title={undefined}
-        description="Discover new movie trailers, reviews, and cinema news. Browse a growing library of films with ratings, genres, and in-depth articles."
+        description="Discover new movie trailers, reviews, and cinema news on VEXN. Browse a growing library of films with ratings, genres, and in-depth articles."
         jsonLd={homeJsonLd}
       />
       <div className="container home-heading">
@@ -67,7 +70,7 @@ export default function Home() {
         {loading ? (
           <>
             <div className="section-head"><h2>Featured</h2></div>
-            <CardSkeletonGrid count={6} />
+            <CardSkeletonGrid count={6} className="movie-grid--featured" />
           </>
         ) : (
           featured.length > 0 && (
@@ -75,9 +78,7 @@ export default function Home() {
               <div className="section-head">
                 <h2>Featured</h2>
               </div>
-              <div className="movie-grid">
-                {featured.map((m) => <MovieCard key={m.id} movie={m} />)}
-              </div>
+              <MovieGrid movies={featured} adAfter={Infinity} className="movie-grid--featured" />
             </>
           )
         )}
@@ -91,9 +92,12 @@ export default function Home() {
         {loading ? (
           <CardSkeletonGrid count={8} />
         ) : latest.length === 0 ? (
-          <div className="empty-state">No movies yet. Upload your first batch from the admin page.</div>
+          <div className="empty-state">
+            <h2>No movies yet</h2>
+            <p>Upload your first batch from the admin page.</p>
+          </div>
         ) : (
-          <MovieGrid movies={latest} />
+          <MovieGrid movies={latest} eager={featured.length === 0} />
         )}
 
         <AdSlot slot="homeMidFeed" />
@@ -107,7 +111,7 @@ export default function Home() {
             <div className="article-grid">
               {articles.map((a) => (
                 <Link to={`/article/${a.slug}`} className="article-card" key={a.id}>
-                  {a.cover_image_url && <img src={a.cover_image_url} alt={a.title} loading="lazy" width="640" height="360" />}
+                  {a.cover_image_url && <img src={a.cover_image_url} alt="" loading="lazy" decoding="async" width="640" height="360" />}
                   <div className="pad">
                     <h3>{a.title}</h3>
                     <p>{a.excerpt}</p>

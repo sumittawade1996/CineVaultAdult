@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
+import { getPosterUrl } from '../lib/poster'
 import Seo from '../components/Seo'
 
 const EMPTY = {
@@ -90,12 +91,15 @@ export default function AdminMovie() {
     setBusy(true)
     setLog(null)
 
+    const trailerUrl = form.trailer_url.trim() || null
     const entry = {
       title: form.title.trim(),
       slug: slugify(form.title),
       year: form.year ? Number(form.year) : null,
-      poster_url: form.poster_url.trim() || null,
-      trailer_url: form.trailer_url.trim() || null,
+      // No poster given: derive a static thumbnail from the trailer where
+      // possible (YouTube) so the card never has to embed a live player.
+      poster_url: form.poster_url.trim() || getPosterUrl({ trailer_url: trailerUrl }),
+      trailer_url: trailerUrl,
       description: form.description.trim() || null,
       keywords: form.keywords.trim() || null,
       tags: form.tags.trim() || null,
@@ -187,7 +191,7 @@ export default function AdminMovie() {
           </div>
 
           <label>
-            Poster image URL
+            Poster image URL <span className="hint">(recommended — cards show this instead of loading the player; YouTube trailers get one automatically, for Eporner run scripts/backfill-posters.mjs)</span>
             <input type="url" value={form.poster_url} onChange={(e) => update('poster_url', e.target.value)} placeholder="https://..." />
           </label>
 

@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { toEmbedUrl } from '../lib/video'
+import { getPosterUrl } from '../lib/poster'
+import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { isAdminAuthed } from '../lib/adminAuth'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
-import MovieCard from '../components/MovieCard'
+import MovieGrid from '../components/MovieGrid'
 import PosterPlaceholder from '../components/PosterPlaceholder'
 import { FALLBACK_SITE_URL } from '../lib/siteConfig'
 
@@ -15,10 +17,17 @@ export default function MovieDetail() {
   const [movie, setMovie] = useState(null)
   const [related, setRelated] = useState([])
   const [notFound, setNotFound] = useState(false)
+  const [posterFailed, setPosterFailed] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+    setMovie(null)
+    setRelated([])
+    setNotFound(false)
+    setPosterFailed(false)
     async function load() {
       const { data } = await supabase.from('movies').select('*').eq('slug', slug).single()
+      if (cancelled) return
       if (!data) {
         setNotFound(true)
         return
@@ -28,27 +37,32 @@ export default function MovieDetail() {
       if (firstTag) {
         const { data: rel } = await supabase
           .from('movies')
-          .select('*')
+          .select(MOVIE_CARD_FIELDS)
           .ilike('tags', `%${firstTag}%`)
           .neq('id', data.id)
           .limit(4)
-        setRelated(rel || [])
+        if (!cancelled) setRelated(rel || [])
       }
     }
     load()
+    return () => { cancelled = true }
   }, [slug])
 
   if (notFound) {
     return (
-      <div className="container empty-state">
-        Movie not found. <Link to="/movies">Back to all movies →</Link>
+      <div className="container" style={{ padding: '48px 0' }}>
+        <div className="empty-state">
+          <h2>Movie not found</h2>
+          <p>That title isn’t in the library (it may have been removed).</p>
+          <Link to="/movies" className="btn btn-outline">Back to all movies</Link>
+        </div>
       </div>
     )
   }
   if (!movie) {
     return (
-      <div className="container" style={{ padding: '48px 0' }}>
-        <div className="detail-hero skeleton-detail-hero">
+      <div className="container">
+        <div className="detail-hero skeleton-detail-hero" aria-hidden="true">
           <div className="detail-poster skeleton-shimmer" />
           <div>
             <div className="skeleton-line skeleton-shimmer" style={{ width: '60%', height: 34, marginBottom: 16 }} />
@@ -64,6 +78,7 @@ export default function MovieDetail() {
   const tags = (movie.tags || '').split(',').map((t) => t.trim()).filter(Boolean)
   const actors = (movie.actors || '').split(',').map((t) => t.trim()).filter(Boolean)
   const embedUrl = toEmbedUrl(movie.trailer_url)
+  const poster = posterFailed ? null : getPosterUrl(movie)
   const siteUrl = (typeof window !== 'undefined' ? window.location.origin : FALLBACK_SITE_URL).replace(/\/$/, '')
 
   const movieJsonLd = {
@@ -71,7 +86,7 @@ export default function MovieDetail() {
     '@type': 'Movie',
     name: movie.title,
     description: movie.description || movie.seo_description || undefined,
-    image: movie.poster_url || undefined,
+    image: poster || undefined,
     datePublished: movie.year ? String(movie.year) : undefined,
     duration: movie.runtime_minutes ? `PT${movie.runtime_minutes}M` : undefined,
     aggregateRating:
@@ -88,7 +103,7 @@ export default function MovieDetail() {
       <Seo
         title={movie.seo_title || movie.title}
         description={movie.seo_description || movie.description}
-        image={movie.poster_url}
+        image={poster}
         type="video.movie"
         jsonLd={movieJsonLd}
       />
@@ -96,8 +111,16 @@ export default function MovieDetail() {
         <div className="detail-hero">
           <div>
             <div className="detail-poster">
-              {movie.poster_url ? (
-                <img src={movie.poster_url} alt={`${movie.title} poster`} width="420" height="240" />
+              {poster ? (
+                <img
+                  src={poster}
+                  alt={`${movie.title} poster`}
+                  width="640"
+                  height="360"
+                  fetchpriority="high"
+                  decoding="async"
+                  onError={() => setPosterFailed(true)}
+                />
               ) : (
                 <PosterPlaceholder title={movie.title} />
               )}
@@ -105,14 +128,10 @@ export default function MovieDetail() {
             <AdSlot slot="detailSidebar" className="detail-sidebar-ad" />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div className="detail-title-row">
               <h1 className="detail-title">{movie.title}</h1>
               {isAdminAuthed() && (
-                <Link
-                  to={`/admin/movie?slug=${movie.slug}`}
-                  className="btn btn-outline"
-                  style={{ flexShrink: 0, fontSize: 13, padding: '6px 14px' }}
-                >
+                <Link to={`/admin/movie?slug=${movie.slug}`} className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
                   Edit movie
                 </Link>
               )}
@@ -120,27 +139,27 @@ export default function MovieDetail() {
             <div className="detail-meta">
               {movie.year && <span>{movie.year}</span>}
               {movie.runtime_minutes && <span>{movie.runtime_minutes} min</span>}
-              {movie.rating != null && <span>★ {movie.rating}</span>}
+              {movie.rating != null && <span aria-label={`Rated ${movie.rating} out of 10`}>★ {movie.rating}</span>}
               {movie.channel && (
-                <Link to={`/channel/${slugify(movie.channel)}`} style={{ color: 'var(--gold)' }}>
+                <Link to={`/channel/${slugify(movie.channel)}`} style={{ color: 'var(--accent)' }}>
                   {movie.channel}
                 </Link>
               )}
             </div>
-            <p className="detail-desc">{movie.description}</p>
+            {movie.description && <p className="detail-desc">{movie.description}</p>}
             {tags.length > 0 && (
-              <div className="ticket-tags">
+              <div className="chip-row">
                 {tags.map((t) => (
-                  <Link to={`/category/${slugify(t)}`} className="tag-chip" key={t}>{t}</Link>
+                  <Link to={`/category/${slugify(t)}`} className="chip" key={t}>{t}</Link>
                 ))}
               </div>
             )}
             {actors.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <div className="hero-eyebrow" style={{ marginBottom: 8 }}>Cast</div>
-                <div className="ticket-tags">
+                <div className="chip-row">
                   {actors.map((a) => (
-                    <Link to={`/actor/${slugify(a)}`} className="tag-chip" key={a}>{a}</Link>
+                    <Link to={`/actor/${slugify(a)}`} className="chip" key={a}>{a}</Link>
                   ))}
                 </div>
               </div>
@@ -167,9 +186,7 @@ export default function MovieDetail() {
           <>
             <AdSlot slot="aboveRelated" />
             <div className="section-head"><h2>You might also like</h2></div>
-            <div className="movie-grid">
-              {related.map((m) => <MovieCard key={m.id} movie={m} />)}
-            </div>
+            <MovieGrid movies={related} adAfter={Infinity} eager={false} />
           </>
         )}
       </div>

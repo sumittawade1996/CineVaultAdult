@@ -2,7 +2,7 @@
 // Edit these values any time; every component that shows a social link
 // or the site name pulls from here so you only change it in one place.
 
-export const SITE_NAME = 'CineVault'
+export const SITE_NAME = 'VEXN'
 
 export const SOCIAL_LINKS = {
   twitter: 'https://x.com/dezzymodel',

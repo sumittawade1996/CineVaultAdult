@@ -3,14 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CineVault — Movies, Trailers &amp; Reviews</title>
-    <meta name="description" content="CineVault is your home for movie trailers, reviews, and cinema news. Discover new releases, read in-depth articles, and browse a growing library of films." />
+    <meta name="theme-color" content="#0b0d10" />
+    <title>VEXN — Movies, Trailers &amp; Reviews</title>
+    <meta name="description" content="VEXN is your home for movie trailers, reviews, and cinema news. Discover new releases, read in-depth articles, and browse a growing library of films." />
     <meta name="google-site-verification" content="Lwldf7-xWovNe8wo-_8rm0esZn9FY7LMd-ZJY5jXX1M" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- Preconnect to your Supabase project for faster data loads.
-         Update this if you ever migrate to a different Supabase project. -->
+    <!-- Preconnect to the Supabase project for faster data loads. Update
+         this if you ever migrate to a different Supabase project. -->
     <link rel="preconnect" href="https://iquunuspkcnhixnhiwdr.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://iquunuspkcnhixnhiwdr.supabase.co" />
+    <!-- Poster CDNs: the first row of posters is the LCP image, and its
+         request can only start after the movie data arrives, so open the
+         connections up front. -->
+    <link rel="preconnect" href="https://static-ca-cdn.eporner.com" />
+    <link rel="preconnect" href="https://i.ytimg.com" />
+    <!-- The header ad is in the first viewport on every page; resolving
+         its host early shortens that request without touching ad code. -->
+    <link rel="dns-prefetch" href="https://supportiveinvoicevarnish.com" />
   </head>
   <body>
     <div id="root"></div>

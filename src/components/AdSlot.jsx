@@ -1,21 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AD_SLOTS } from '../lib/adSlots'
-
-const MOBILE_BREAKPOINT = 768
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT
-  )
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
-    const onChange = () => setIsMobile(mq.matches)
-    onChange()
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-  return isMobile
-}
+import { useIsMobile } from '../lib/useIsMobile'
 
 // Renders one named ad placement. Looks up its config in
 // src/lib/adSlots.js — if the resolved html is still null, shows a
@@ -98,7 +83,7 @@ export default function AdSlot({ slot, className = '' }) {
         </button>
       )}
       {resolvedHtml ? (
-        <div className="ad-slot-live" ref={contentRef} aria-label={config.label} />
+        <div className="ad-slot-live" ref={contentRef} />
       ) : (
         <div className="ad-slot" role="complementary" aria-label={config.label} ref={contentRef}>
           {config.label} — ad slot{isMobile ? ' (mobile)' : ''}
