@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import AdSlot from './components/AdSlot'
+import AgeGate from './components/AgeGate'
 import RequireAdmin from './components/RequireAdmin'
 import Home from './pages/Home'
 import Movies from './pages/Movies'
@@ -24,6 +25,10 @@ const ChannelDetail = lazy(() => import('./pages/ChannelDetail'))
 const Categories = lazy(() => import('./pages/Categories'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+const Terms = lazy(() => import('./pages/legal/Terms'))
+const Privacy = lazy(() => import('./pages/legal/Privacy'))
+const Dmca = lazy(() => import('./pages/legal/Dmca'))
+const Statement2257 = lazy(() => import('./pages/legal/Statement2257'))
 
 function RouteFallback() {
   return <div className="container route-fallback" aria-hidden="true" />
@@ -35,6 +40,7 @@ export default function App() {
 
   return (
     <>
+      <AgeGate />
       <Navbar />
       {!isAdmin && (
         <div className="container">
@@ -58,6 +64,10 @@ export default function App() {
             <Route path="/admin/upload" element={<RequireAdmin><AdminUpload /></RequireAdmin>} />
             <Route path="/admin/article" element={<RequireAdmin><AdminArticle /></RequireAdmin>} />
             <Route path="/admin/movie" element={<RequireAdmin><AdminMovie /></RequireAdmin>} />
+            <Route path="/legal/terms" element={<Terms />} />
+            <Route path="/legal/privacy" element={<Privacy />} />
+            <Route path="/legal/dmca" element={<Dmca />} />
+            <Route path="/legal/2257" element={<Statement2257 />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

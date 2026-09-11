@@ -95,6 +95,9 @@ async function main() {
   }])
   routes.push(['/movies', { movies: cardRows.slice(0, MOVIES_PAGE_SIZE).map(stripActors), total: cardRows.length }])
   routes.push(['/articles', { articles: articleRows.slice(0, ARTICLES_PAGE_SIZE), total: articleRows.length }])
+  // Static compliance pages carry no Supabase data — the route alone is
+  // enough for entry-server to render their fixed content.
+  for (const path of ['/legal/terms', '/legal/privacy', '/legal/dmca', '/legal/2257']) routes.push([path, {}])
 
   const taxonomies = [
     { field: 'actors', listPath: '/actors', basePath: '/actor', items: buildTaxonomy(cardRows, 'actors') },

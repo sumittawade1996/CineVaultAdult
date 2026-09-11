@@ -30,6 +30,10 @@ const STATIC_ROUTES = [
   { path: '/actors', changefreq: 'weekly', priority: '0.6' },
   { path: '/channels', changefreq: 'weekly', priority: '0.6' },
   { path: '/categories', changefreq: 'weekly', priority: '0.6' },
+  { path: '/legal/terms', changefreq: 'yearly', priority: '0.2' },
+  { path: '/legal/privacy', changefreq: 'yearly', priority: '0.2' },
+  { path: '/legal/dmca', changefreq: 'yearly', priority: '0.2' },
+  { path: '/legal/2257', changefreq: 'yearly', priority: '0.2' },
 ]
 
 function slugify(input) {

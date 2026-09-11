@@ -27,8 +27,15 @@ export default function Footer() {
             <span>Telegram</span>
           </a>
         </div>
+        <nav className="footer-legal" aria-label="Legal">
+          <Link to="/legal/terms">Terms</Link>
+          <Link to="/legal/privacy">Privacy</Link>
+          <Link to="/legal/dmca">DMCA</Link>
+          <Link to="/legal/2257">18 U.S.C. 2257</Link>
+        </nav>
         <p className="footer-note" suppressHydrationWarning>
           © {new Date().getFullYear()} {SITE_NAME}. Movie posters and artwork remain the property of their respective studios.
+          All models depicted were adults, 18 years of age or older, at the time of production.
         </p>
       </div>
     </footer>
