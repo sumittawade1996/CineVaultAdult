@@ -50,16 +50,25 @@ function xmlEscape(str) {
     .replace(/"/g, '&quot;')
 }
 
-// Splits a comma-separated field (actors/tags) across all movie rows
-// into a unique, slugified list of { path } sitemap entries.
-function commaFieldRoutes(rows, field, basePath) {
-  const seen = new Set()
+// Taxonomy pages with fewer titles than this are noindex (see
+// src/pages/TaxonomyDetail.jsx) and must stay out of the sitemap too.
+const MIN_INDEXABLE_TITLES = 3
+
+// Counts how many movies are filed under each slug of a field, then keeps
+// the slugs with enough titles to be worth indexing.
+function indexableSlugs(rows, field, { single = false } = {}) {
+  const counts = new Map()
   for (const row of rows) {
-    for (const name of (row[field] || '').split(',').map((s) => s.trim()).filter(Boolean)) {
-      seen.add(slugify(name))
+    const names = single ? [row[field]] : (row[field] || '').split(',')
+    for (const slug of new Set(names.map((s) => (s || '').trim()).filter(Boolean).map(slugify))) {
+      counts.set(slug, (counts.get(slug) || 0) + 1)
     }
   }
-  return [...seen].map((slug) => `${basePath}/${slug}`)
+  return [...counts].filter(([, n]) => n >= MIN_INDEXABLE_TITLES).map(([slug]) => slug)
+}
+
+function commaFieldRoutes(rows, field, basePath) {
+  return indexableSlugs(rows, field).map((slug) => `${basePath}/${slug}`)
 }
 
 function urlEntry(loc, { changefreq, priority, lastmod, image }) {
@@ -149,9 +158,7 @@ async function main() {
   // ---- sitemap-taxonomy.xml (actors / channels / categories) ----
   const actorRoutes = commaFieldRoutes(movies, 'actors', '/actor')
   const categoryRoutes = commaFieldRoutes(movies, 'tags', '/category')
-  const channelRoutes = [...new Set(movies.map((m) => m.channel).filter(Boolean))].map(
-    (c) => `/channel/${slugify(c)}`
-  )
+  const channelRoutes = indexableSlugs(movies, 'channel', { single: true }).map((slug) => `/channel/${slug}`)
   const taxonomyXml = urlset(
     [...actorRoutes, ...categoryRoutes, ...channelRoutes].map((p) =>
       urlEntry(`${SITE_URL}${p}`, { changefreq: 'weekly', priority: '0.5' })

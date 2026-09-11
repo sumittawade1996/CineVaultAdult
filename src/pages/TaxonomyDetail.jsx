@@ -11,6 +11,12 @@ import CardSkeletonGrid from '../components/CardSkeletonGrid'
 
 const PAGE_SIZE = 20
 
+// An actor/category/channel page listing only one or two titles reads as a
+// doorway page to search engines and dilutes the whole site; keep those
+// out of the index until enough movies are filed under them. Mirrored in
+// scripts/generate-sitemap.mjs, which omits the same pages.
+export const MIN_INDEXABLE_TITLES = 3
+
 // Cards don't need the actors column, but the actor pages filter on it.
 export const TAXONOMY_FIELDS = `${MOVIE_CARD_FIELDS},actors`
 
@@ -75,7 +81,7 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
       <Seo
         title={`${name} — ${label}`}
         description={`Browse every movie ${label.toLowerCase() === 'actor' ? 'starring' : 'in'} ${name} on VEXN.`}
-        noindex={page > 1}
+        noindex={page > 1 || allMatches.length < MIN_INDEXABLE_TITLES}
       />
       <div className="container">
         <div className="page-head">

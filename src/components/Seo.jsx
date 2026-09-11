@@ -26,7 +26,7 @@ export default function Seo({ title, description, image, url, type = 'website', 
     <Helmet>
       <title>{fullTitle}</title>
       {description && <meta name="description" content={description} />}
-      <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+      <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow'} />
       <link rel="canonical" href={canonical} />
       <meta property="og:type" content={type} />
       <meta property="og:site_name" content={SITE_NAME} />
