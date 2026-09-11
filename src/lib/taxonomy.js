@@ -1,4 +1,4 @@
-import { slugify } from './slugify'
+import { slugify } from './slugify.js'
 
 // Turns a list of movies + a comma-separated field name (e.g. "actors" or "tags")
 // into a sorted, deduped list of { name, slug, count }.

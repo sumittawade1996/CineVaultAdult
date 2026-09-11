@@ -1,22 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 import { FALLBACK_SITE_URL } from '../lib/siteConfig'
 
 export default function ArticleDetail() {
   const { slug } = useParams()
-  const [article, setArticle] = useState(null)
+  const pre = usePreload()
+  const [article, setArticle] = useState(pre?.article ?? null)
   const [notFound, setNotFound] = useState(false)
+  const silentRefresh = useRef(!!pre)
 
   useEffect(() => {
+    let cancelled = false
+    if (silentRefresh.current) {
+      silentRefresh.current = false
+    } else {
+      setArticle(null)
+      setNotFound(false)
+    }
     async function load() {
       const { data } = await supabase.from('articles').select('*').eq('slug', slug).single()
+      if (cancelled) return
       if (!data) setNotFound(true)
       else setArticle(data)
     }
     load()
+    return () => { cancelled = true }
   }, [slug])
 
   if (notFound) {
@@ -39,7 +51,6 @@ export default function ArticleDetail() {
     )
   }
 
-  const siteUrl = (typeof window !== 'undefined' ? window.location.origin : FALLBACK_SITE_URL).replace(/\/$/, '')
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -48,7 +59,7 @@ export default function ArticleDetail() {
     image: article.cover_image_url || undefined,
     author: article.author ? { '@type': 'Person', name: article.author } : undefined,
     datePublished: article.created_at || undefined,
-    mainEntityOfPage: `${siteUrl}/article/${article.slug}`,
+    mainEntityOfPage: `${FALLBACK_SITE_URL}/article/${article.slug}`,
   }
 
   return (

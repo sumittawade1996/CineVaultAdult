@@ -2,23 +2,22 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
+import { usePreload } from '../lib/preload'
 import MovieGrid from '../components/MovieGrid'
 import AdSlot from '../components/AdSlot'
 import Seo from '../components/Seo'
 import CardSkeletonGrid from '../components/CardSkeletonGrid'
 import { SITE_NAME, SOCIAL_LINKS, FALLBACK_SITE_URL } from '../lib/siteConfig'
 
-const siteUrl = (typeof window !== 'undefined' ? window.location.origin : FALLBACK_SITE_URL).replace(/\/$/, '')
-
 const homeJsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_NAME,
-    url: siteUrl,
+    url: FALLBACK_SITE_URL,
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${siteUrl}/movies?q={search_term_string}`,
+      target: `${FALLBACK_SITE_URL}/movies?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   },
@@ -26,16 +25,17 @@ const homeJsonLd = [
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: SITE_NAME,
-    url: siteUrl,
+    url: FALLBACK_SITE_URL,
     sameAs: [SOCIAL_LINKS.twitter, SOCIAL_LINKS.telegram],
   },
 ]
 
 export default function Home() {
-  const [featured, setFeatured] = useState([])
-  const [latest, setLatest] = useState([])
-  const [articles, setArticles] = useState([])
-  const [loading, setLoading] = useState(true)
+  const pre = usePreload()
+  const [featured, setFeatured] = useState(pre?.featured ?? [])
+  const [latest, setLatest] = useState(pre?.latest ?? [])
+  const [articles, setArticles] = useState(pre?.articles ?? [])
+  const [loading, setLoading] = useState(!pre)
 
   useEffect(() => {
     let cancelled = false
@@ -78,7 +78,7 @@ export default function Home() {
               <div className="section-head">
                 <h2>Featured</h2>
               </div>
-              <MovieGrid movies={featured} adAfter={Infinity} className="movie-grid--featured" />
+              <MovieGrid movies={featured} ad={false} featured className="movie-grid--featured" />
             </>
           )
         )}

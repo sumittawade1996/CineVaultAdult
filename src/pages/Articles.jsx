@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 import Pagination from '../components/Pagination'
@@ -10,13 +11,17 @@ const PAGE_SIZE = 20
 export default function Articles() {
   const [params, setParams] = useSearchParams()
   const page = Math.max(1, Number(params.get('page') || 1))
-  const [articles, setArticles] = useState([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const pre = usePreload()
+  const [articles, setArticles] = useState(pre?.articles ?? [])
+  const [total, setTotal] = useState(pre?.total ?? 0)
+  const [loading, setLoading] = useState(!pre)
+  const silentRefresh = useRef(!!pre)
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
-      setLoading(true)
+      if (silentRefresh.current) silentRefresh.current = false
+      else setLoading(true)
       const from = (page - 1) * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
       const { data, count } = await supabase
@@ -25,11 +30,13 @@ export default function Articles() {
         .eq('published', true)
         .order('created_at', { ascending: false })
         .range(from, to)
+      if (cancelled) return
       setArticles(data || [])
       setTotal(count || 0)
       setLoading(false)
     }
     load()
+    return () => { cancelled = true }
   }, [page])
 
   function goToPage(nextPage) {

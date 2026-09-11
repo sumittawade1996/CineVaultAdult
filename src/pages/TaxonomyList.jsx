@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { buildTaxonomy, buildSingleTaxonomy } from '../lib/taxonomy'
+import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 
 export default function TaxonomyList({ field, single, title, basePath, description }) {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const pre = usePreload()
+  const [items, setItems] = useState(pre?.items ?? [])
+  const [loading, setLoading] = useState(!pre)
 
   useEffect(() => {
     let cancelled = false

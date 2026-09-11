@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
+import { usePreload } from '../lib/preload'
 import MovieGrid from '../components/MovieGrid'
 import Seo from '../components/Seo'
 import Pagination from '../components/Pagination'
@@ -10,41 +11,48 @@ import CardSkeletonGrid from '../components/CardSkeletonGrid'
 
 const PAGE_SIZE = 20
 
+// Cards don't need the actors column, but the actor pages filter on it.
+export const TAXONOMY_FIELDS = `${MOVIE_CARD_FIELDS},actors`
+
+export function matchesSlug(movie, field, slug) {
+  return (movie[field] || '')
+    .split(',')
+    .map((s) => s.trim())
+    .some((v) => v && slugify(v) === slug)
+}
+
+export function displayName(movie, field, slug) {
+  return (movie[field] || '')
+    .split(',')
+    .map((s) => s.trim())
+    .find((v) => slugify(v) === slug)
+}
+
 export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
   const { slug } = useParams()
   const [params, setParams] = useSearchParams()
   const page = Math.max(1, Number(params.get('page') || 1))
-  const [allMatches, setAllMatches] = useState([])
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(true)
+  const pre = usePreload()
+  const [allMatches, setAllMatches] = useState(pre?.allMatches ?? [])
+  const [name, setName] = useState(pre?.name ?? '')
+  const [loading, setLoading] = useState(!pre)
+  const silentRefresh = useRef(!!pre)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setLoading(true)
+      if (silentRefresh.current) silentRefresh.current = false
+      else setLoading(true)
       // Fetch broadly, then filter client-side by matching slug — comma
       // fields (actors/tags) can't be exact-matched in SQL reliably.
       const { data } = await supabase
         .from('movies')
-        .select(MOVIE_CARD_FIELDS)
+        .select(TAXONOMY_FIELDS)
         .order('created_at', { ascending: false })
       if (cancelled) return
-      const matches = (data || []).filter((m) =>
-        (m[field] || '')
-          .split(',')
-          .map((s) => s.trim())
-          .some((v) => v && slugify(v) === slug)
-      )
+      const matches = (data || []).filter((m) => matchesSlug(m, field, slug))
       setAllMatches(matches)
-      if (matches.length > 0) {
-        const original = (matches[0][field] || '')
-          .split(',')
-          .map((s) => s.trim())
-          .find((v) => slugify(v) === slug)
-        setName(original || slug)
-      } else {
-        setName(slug)
-      }
+      setName((matches.length > 0 && displayName(matches[0], field, slug)) || slug)
       setLoading(false)
     }
     load()

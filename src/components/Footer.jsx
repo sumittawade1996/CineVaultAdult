@@ -27,7 +27,7 @@ export default function Footer() {
             <span>Telegram</span>
           </a>
         </div>
-        <p className="footer-note">
+        <p className="footer-note" suppressHydrationWarning>
           © {new Date().getFullYear()} {SITE_NAME}. Movie posters and artwork remain the property of their respective studios.
         </p>
       </div>

@@ -1,30 +1,43 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { toEmbedUrl } from '../lib/video'
-import { getPosterUrl } from '../lib/poster'
+import { getPosterUrl, IMAGE_CDN, optimizedPosterUrl, posterSrcSet } from '../lib/poster'
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { isAdminAuthed } from '../lib/adminAuth'
+import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 import MovieGrid from '../components/MovieGrid'
 import PosterPlaceholder from '../components/PosterPlaceholder'
 import { FALLBACK_SITE_URL } from '../lib/siteConfig'
 
+const DETAIL_SIZES = '(max-width: 860px) 100vw, 640px'
+
 export default function MovieDetail() {
   const { slug } = useParams()
-  const [movie, setMovie] = useState(null)
-  const [related, setRelated] = useState([])
+  const pre = usePreload()
+  const [movie, setMovie] = useState(pre?.movie ?? null)
+  const [related, setRelated] = useState(pre?.related ?? [])
   const [notFound, setNotFound] = useState(false)
-  const [posterFailed, setPosterFailed] = useState(false)
+  // 0 = optimized via Image CDN, 1 = original URL, 2 = placeholder
+  const [posterStage, setPosterStage] = useState(0)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const silentRefresh = useRef(!!pre)
+
+  useEffect(() => { setIsAdmin(isAdminAuthed()) }, [])
 
   useEffect(() => {
     let cancelled = false
-    setMovie(null)
-    setRelated([])
-    setNotFound(false)
-    setPosterFailed(false)
+    if (silentRefresh.current) {
+      silentRefresh.current = false
+    } else {
+      setMovie(null)
+      setRelated([])
+      setNotFound(false)
+      setPosterStage(0)
+    }
     async function load() {
       const { data } = await supabase.from('movies').select('*').eq('slug', slug).single()
       if (cancelled) return
@@ -40,6 +53,7 @@ export default function MovieDetail() {
           .select(MOVIE_CARD_FIELDS)
           .ilike('tags', `%${firstTag}%`)
           .neq('id', data.id)
+          .order('created_at', { ascending: false })
           .limit(4)
         if (!cancelled) setRelated(rel || [])
       }
@@ -78,15 +92,16 @@ export default function MovieDetail() {
   const tags = (movie.tags || '').split(',').map((t) => t.trim()).filter(Boolean)
   const actors = (movie.actors || '').split(',').map((t) => t.trim()).filter(Boolean)
   const embedUrl = toEmbedUrl(movie.trailer_url)
-  const poster = posterFailed ? null : getPosterUrl(movie)
-  const siteUrl = (typeof window !== 'undefined' ? window.location.origin : FALLBACK_SITE_URL).replace(/\/$/, '')
+  const original = getPosterUrl(movie)
+  const useCdn = posterStage === 0 && original && IMAGE_CDN
+  const poster = posterStage === 2 ? null : original
 
   const movieJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Movie',
     name: movie.title,
     description: movie.description || movie.seo_description || undefined,
-    image: poster || undefined,
+    image: original || undefined,
     datePublished: movie.year ? String(movie.year) : undefined,
     duration: movie.runtime_minutes ? `PT${movie.runtime_minutes}M` : undefined,
     aggregateRating:
@@ -95,7 +110,7 @@ export default function MovieDetail() {
         : undefined,
     actor: actors.length ? actors.map((name) => ({ '@type': 'Person', name })) : undefined,
     genre: tags.length ? tags : undefined,
-    url: `${siteUrl}/movie/${movie.slug}`,
+    url: `${FALLBACK_SITE_URL}/movie/${movie.slug}`,
   }
 
   return (
@@ -103,7 +118,7 @@ export default function MovieDetail() {
       <Seo
         title={movie.seo_title || movie.title}
         description={movie.seo_description || movie.description}
-        image={poster}
+        image={original}
         type="video.movie"
         jsonLd={movieJsonLd}
       />
@@ -113,13 +128,15 @@ export default function MovieDetail() {
             <div className="detail-poster">
               {poster ? (
                 <img
-                  src={poster}
+                  src={useCdn ? optimizedPosterUrl(poster, 960) : poster}
+                  srcSet={useCdn ? posterSrcSet(poster) : undefined}
+                  sizes={useCdn ? DETAIL_SIZES : undefined}
                   alt={`${movie.title} poster`}
                   width="640"
                   height="360"
                   fetchpriority="high"
                   decoding="async"
-                  onError={() => setPosterFailed(true)}
+                  onError={() => setPosterStage(useCdn ? 1 : 2)}
                 />
               ) : (
                 <PosterPlaceholder title={movie.title} />
@@ -130,7 +147,7 @@ export default function MovieDetail() {
           <div>
             <div className="detail-title-row">
               <h1 className="detail-title">{movie.title}</h1>
-              {isAdminAuthed() && (
+              {isAdmin && (
                 <Link to={`/admin/movie?slug=${movie.slug}`} className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
                   Edit movie
                 </Link>
@@ -186,7 +203,7 @@ export default function MovieDetail() {
           <>
             <AdSlot slot="aboveRelated" />
             <div className="section-head"><h2>You might also like</h2></div>
-            <MovieGrid movies={related} adAfter={Infinity} eager={false} />
+            <MovieGrid movies={related} ad={false} eager={false} />
           </>
         )}
       </div>

@@ -422,8 +422,19 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 @media (max-width: 640px) {
   .movie-grid, .movie-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
-/* In-feed ad rendered as one full-width row of the grid */
+/* In-feed ad rendered as one full-width row of the grid. It is the 7th
+   child in the DOM (after three phone rows); wider layouts reorder it to
+   sit after the 12th card, and drop it when the grid is shorter than that. */
 .movie-grid > .movie-grid-ad { grid-column: 1 / -1; margin: 6px 0; }
+@media (min-width: 641px) {
+  .movie-grid > .movie-grid-ad { order: 1; }
+  .movie-grid > .movie-grid-ad ~ :nth-child(n + 14) { order: 2; }
+  .movie-grid > .movie-grid-ad--phone-only { display: none; }
+}
+/* Device-specific slots are hidden by CSS on first paint; the JS check in
+   AdSlot only decides whether the ad code is ever injected. */
+@media (max-width: 768px) { .ad-slot-wrap--desktop-only { display: none; } }
+@media (min-width: 769px) { .ad-slot-wrap--mobile-only { display: none; } }
 
 .movie-card {
   display: flex;

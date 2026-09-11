@@ -67,8 +67,9 @@ export default function AdSlot({ slot, className = '' }) {
 
   if (suppressed || dismissed) return null
 
-  const formatClass = config.format ? `ad-slot--${config.format}` : ''
-  const wrapperClass = `ad-slot-wrap ${formatClass} ${className}`.trim()
+  const formatClass = config.format ? `ad-slot-wrap--${config.format}` : ''
+  const deviceClass = config.desktopOnly ? 'ad-slot-wrap--desktop-only' : config.mobileOnly ? 'ad-slot-wrap--mobile-only' : ''
+  const wrapperClass = ['ad-slot-wrap', formatClass, deviceClass, className].filter(Boolean).join(' ')
 
   function dismiss() {
     setDismissed(true)

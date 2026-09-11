@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
+import { usePreload } from '../lib/preload'
 import MovieGrid from '../components/MovieGrid'
 import Seo from '../components/Seo'
 import Pagination from '../components/Pagination'
@@ -34,16 +35,21 @@ export default function Movies() {
   const q = (params.get('q') || '').trim()
   const page = Math.max(1, Number(params.get('page') || 1))
   const sortKey = SORTS[params.get('sort')] ? params.get('sort') : 'newest'
-  const [movies, setMovies] = useState([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const pre = usePreload()
+  const [movies, setMovies] = useState(pre?.movies ?? [])
+  const [total, setTotal] = useState(pre?.total ?? 0)
+  const [loading, setLoading] = useState(!pre)
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  // A prerendered page already shows its data; the first fetch only
+  // refreshes it quietly instead of swapping in skeletons.
+  const silentRefresh = useRef(!!pre)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setLoading(true)
+      if (silentRefresh.current) silentRefresh.current = false
+      else setLoading(true)
       setError(false)
       const from = (page - 1) * PAGE_SIZE
       const to = from + PAGE_SIZE - 1

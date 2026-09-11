@@ -1,5 +1,7 @@
 import { Helmet } from 'react-helmet-async'
+import { useLocation } from 'react-router-dom'
 import { SITE_NAME, SOCIAL_LINKS, FALLBACK_SITE_URL } from '../lib/siteConfig'
+import { normalizePath } from '../lib/preload'
 
 const twitterHandle = '@' + SOCIAL_LINKS.twitter.split('/').filter(Boolean).pop()
 
@@ -13,9 +15,11 @@ const twitterHandle = '@' + SOCIAL_LINKS.twitter.split('/').filter(Boolean).pop(
  * @param {object|object[]} [jsonLd] - one or more schema.org objects to emit as JSON-LD
  */
 export default function Seo({ title, description, image, url, type = 'website', noindex = false, jsonLd }) {
+  const { pathname, search } = useLocation()
   const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} — Movies, Trailers & Reviews`
-  const canonical =
-    url || (typeof window !== 'undefined' ? window.location.href.split('#')[0] : FALLBACK_SITE_URL)
+  // Always the production origin: the same page on a deploy preview must
+  // point search engines at vexn.org, not at the preview host.
+  const canonical = url || `${FALLBACK_SITE_URL}${normalizePath(pathname)}${search}`
   const ldBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
 
   return (

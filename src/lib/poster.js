@@ -23,3 +23,20 @@ export function getPosterUrl(movie) {
   const yt = youtubeId(movie.trailer_url)
   return yt ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : null
 }
+
+// Posters are hotlinked from third-party CDNs (Eporner, YouTube) that are
+// slow and occasionally stall for seconds, which made them the page's LCP
+// bottleneck. On Netlify they're served through Netlify Image CDN instead:
+// resized, WebP, cached at Netlify's edge. The source hosts are
+// allow-listed in netlify.toml. `__IMAGE_CDN__` is set in vite.config.js.
+export const IMAGE_CDN = typeof __IMAGE_CDN__ !== 'undefined' && __IMAGE_CDN__
+
+export const POSTER_WIDTHS = [320, 480, 640, 960]
+
+export function optimizedPosterUrl(src, width) {
+  return `/.netlify/images?url=${encodeURIComponent(src)}&w=${width}&fm=webp&q=75`
+}
+
+export function posterSrcSet(src) {
+  return POSTER_WIDTHS.map((w) => `${optimizedPosterUrl(src, w)} ${w}w`).join(', ')
+}
