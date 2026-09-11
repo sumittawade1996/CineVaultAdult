@@ -5,6 +5,7 @@ import Footer from './components/Footer'
 import AdSlot from './components/AdSlot'
 import AgeGate from './components/AgeGate'
 import RequireAdmin from './components/RequireAdmin'
+import { useTrackPageView } from './lib/analytics'
 import Home from './pages/Home'
 import Movies from './pages/Movies'
 
@@ -37,6 +38,7 @@ function RouteFallback() {
 export default function App() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
+  useTrackPageView()
 
   return (
     <>
