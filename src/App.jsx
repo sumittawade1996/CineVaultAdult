@@ -81,6 +81,7 @@ export default function App() {
       )}
       <Footer />
       {!isAdmin && <AdSlot slot="stickyMobile" />}
+      {!isAdmin && <AdSlot slot="socialBar" />}
     </>
   )
 }

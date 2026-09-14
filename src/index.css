@@ -420,7 +420,7 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .movie-grid--featured { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 .movie-grid--featured .movie-title { font-size: 17px; }
 @media (max-width: 640px) {
-  .movie-grid, .movie-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .movie-grid, .movie-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 4px; row-gap: 12px; }
 }
 /* In-feed ad rendered as one full-width row of the grid. It is the 7th
    child in the DOM (after three phone rows); wider layouts reorder it to
@@ -535,7 +535,7 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 @media (max-width: 640px) {
   .movie-body { padding: 10px 10px 12px; }
   .movie-title { font-size: 13.5px; }
-  .chip-row { display: none; }
+  .movie-card .chip-row { display: none; }
   .badge-channel { display: none; }
 }
 
@@ -739,6 +739,24 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
 }
 .ad-slot-wrap--sticky .ad-slot { border: none; padding: 4px; min-height: 50px; }
+
+/* Social bar: Adsterra's own script injects a small self-positioning
+   floating widget (fixed corner icon, expands/collapses on its own) —
+   our wrapper must take zero layout space so it never pushes on content. */
+.ad-slot-wrap--social-bar {
+  /* fixed + zero-size so it sits in the viewport (not wherever it falls in
+     document flow) — the IntersectionObserver in AdSlot.jsx needs it to be
+     on-screen immediately, otherwise a widget meant to float persistently
+     wouldn't load until a visitor scrolled to the very bottom of the page */
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  overflow: visible;
+}
+.ad-slot-wrap--social-bar .ad-slot-live { width: auto; display: contents; }
 .ad-slot-close {
   position: absolute;
   top: 50%;

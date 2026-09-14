@@ -72,6 +72,14 @@ export const AD_SLOTS = {
 </script>
 <script src="https://supportiveinvoicevarnish.com/2260e6c38ea6fb994bedaf818bff091f/invoke.js"></script>`, // shows just above the site footer on every non-admin page
   },
+  socialBar: {
+    label: 'Social bar',
+    format: 'social-bar',
+    html: `<script src="https://supportiveinvoicevarnish.com/f0/10/13/f010135b24ae94e9bf9be88f3d51e2ed.js"></script>`,
+    // Adsterra's own self-positioning floating widget (small corner icon,
+    // expands/collapses via its own UI) — no dismiss button of ours layered
+    // on top, and no reserved layout space (see .ad-slot-wrap--social-bar).
+  },
 
   // ---------- Homepage ----------
   homeLeaderboard: {
