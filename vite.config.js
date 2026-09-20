@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 // server-rendered and hydrated markup agree.
 const imageCdn = process.env.NETLIFY === 'true' || process.env.IMAGE_CDN === '1'
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react()],
   define: {
     __IMAGE_CDN__: JSON.stringify(imageCdn),
@@ -18,18 +18,24 @@ export default defineConfig({
     noExternal: ['react-helmet-async'],
   },
   build: {
-    rollupOptions: {
-      output: {
-        // Vendor libraries change far less often than app code. Splitting
-        // them into their own chunk means a deploy that only touches app
-        // code doesn't force visitors to re-download React/Supabase/etc —
-        // the vendor chunk keeps its own cache-busted filename and stays
-        // cached across deploys where its contents are unchanged.
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom', 'react-helmet-async'],
-          supabase: ['@supabase/supabase-js'],
+    rollupOptions: isSsrBuild
+      ? {}
+      : {
+          output: {
+            // Vendor libraries change far less often than app code. Splitting
+            // them into their own chunk means a deploy that only touches app
+            // code doesn't force visitors to re-download React/Supabase/etc —
+            // the vendor chunk keeps its own cache-busted filename and stays
+            // cached across deploys where its contents are unchanged.
+            // SSR-only: the prerender build (`vite build --ssr ...`)
+            // externalizes react/react-dom by default, which conflicts with
+            // also putting them in manualChunks — so this only applies to
+            // the client build.
+            manualChunks: {
+              vendor: ['react', 'react-dom', 'react-router-dom', 'react-helmet-async'],
+              supabase: ['@supabase/supabase-js'],
+            },
+          },
         },
-      },
-    },
   },
-})
+}))
