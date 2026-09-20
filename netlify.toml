@@ -8,6 +8,7 @@
   remote_images = [
     "https://static-ca-cdn\\.eporner\\.com/.*",
     "https://static-eu-cdn\\.eporner\\.com/.*",
+    "https://imggen\\.eporner\\.com/.*",
     "https://i\\.ytimg\\.com/.*",
   ]
 
