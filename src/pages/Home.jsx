@@ -59,11 +59,11 @@ export default function Home() {
     <>
       <Seo
         title={undefined}
-        description="Discover new movie trailers, reviews, and cinema news on VEXN. Browse a growing library of films with ratings, genres, and in-depth articles."
+        description="Big tits, top performers, and new scenes added daily on VEXN. Browse a growing HD library by category, performer, and channel."
         jsonLd={homeJsonLd}
       />
       <div className="container home-heading">
-        <h1>Movie Trailers, Reviews &amp; Cinema News</h1>
+        <h1>Big Tits, Top Performers, New Scenes Daily</h1>
       </div>
 
       <div className="container">

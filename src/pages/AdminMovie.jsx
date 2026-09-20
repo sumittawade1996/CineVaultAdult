@@ -18,6 +18,8 @@ const EMPTY = {
   rating: '',
   runtime_minutes: '',
   featured: false,
+  seo_title: '',
+  seo_description: '',
 }
 
 // Turn a movies row into form-shaped strings (inputs need strings, not
@@ -36,6 +38,8 @@ function toFormValues(row) {
     rating: row.rating != null ? String(row.rating) : '',
     runtime_minutes: row.runtime_minutes != null ? String(row.runtime_minutes) : '',
     featured: !!row.featured,
+    seo_title: row.seo_title || '',
+    seo_description: row.seo_description || '',
   }
 }
 
@@ -108,6 +112,8 @@ export default function AdminMovie() {
       rating: form.rating ? Number(form.rating) : null,
       runtime_minutes: form.runtime_minutes ? Number(form.runtime_minutes) : null,
       featured: form.featured,
+      seo_title: form.seo_title.trim() || null,
+      seo_description: form.seo_description.trim() || null,
     }
 
     const { error } = editingId
@@ -231,6 +237,16 @@ export default function AdminMovie() {
               <input type="text" value={form.keywords} onChange={(e) => update('keywords', e.target.value)} />
             </label>
           </div>
+
+          <label>
+            SEO title <span className="hint">(falls back to the movie title if left blank)</span>
+            <input type="text" value={form.seo_title} onChange={(e) => update('seo_title', e.target.value)} placeholder="e.g. Movie Title – Big Tits HD" />
+          </label>
+
+          <label>
+            SEO description <span className="hint">(falls back to the description above if left blank)</span>
+            <textarea rows={3} value={form.seo_description} onChange={(e) => update('seo_description', e.target.value)} />
+          </label>
 
           <label className="admin-checkbox">
             <input type="checkbox" checked={form.featured} onChange={(e) => update('featured', e.target.checked)} />

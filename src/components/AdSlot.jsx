@@ -19,6 +19,7 @@ export default function AdSlot({ slot, className = '' }) {
   const contentRef = useRef(null)
   const [inView, setInView] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [unfilled, setUnfilled] = useState(false)
   const config = AD_SLOTS[slot]
   const isMobile = useIsMobile()
 
@@ -50,13 +51,30 @@ export default function AdSlot({ slot, className = '' }) {
 
   useEffect(() => {
     if (!inView || !contentRef.current || !resolvedHtml) return
-    contentRef.current.innerHTML = resolvedHtml
-    contentRef.current.querySelectorAll('script').forEach((oldScript) => {
+    const el = contentRef.current
+    el.innerHTML = resolvedHtml
+    el.querySelectorAll('script').forEach((oldScript) => {
       const newScript = document.createElement('script')
       Array.from(oldScript.attributes).forEach((attr) => newScript.setAttribute(attr.name, attr.value))
       newScript.textContent = oldScript.textContent
       oldScript.replaceWith(newScript)
     })
+
+    // Some networks reuse the exact same ad-unit id across more than one
+    // slot on a page (this site has several duplicated invoke.js keys —
+    // see adSlots.js) and their script only fills the first DOM instance
+    // it finds, since it looks the container up by id. Later duplicates
+    // inject their script but stay empty, while the CSS min-height still
+    // reserves a full ad-sized box for them, leaving a dead gap in the
+    // layout. If nothing actually rendered after a few seconds, stop
+    // reserving space for this instance instead of leaving it empty.
+    const hasVisibleAd = () =>
+      !!el.querySelector('iframe') ||
+      [...el.querySelectorAll('[id^="container-"]')].some((c) => c.children.length > 0)
+    const timer = setTimeout(() => {
+      if (!hasVisibleAd()) setUnfilled(true)
+    }, 3000)
+    return () => clearTimeout(timer)
   }, [inView, resolvedHtml])
 
   useEffect(() => {
@@ -69,7 +87,8 @@ export default function AdSlot({ slot, className = '' }) {
 
   const formatClass = config.format ? `ad-slot-wrap--${config.format}` : ''
   const deviceClass = config.desktopOnly ? 'ad-slot-wrap--desktop-only' : config.mobileOnly ? 'ad-slot-wrap--mobile-only' : ''
-  const wrapperClass = ['ad-slot-wrap', formatClass, deviceClass, className].filter(Boolean).join(' ')
+  const unfilledClass = unfilled ? 'ad-slot-wrap--unfilled' : ''
+  const wrapperClass = ['ad-slot-wrap', formatClass, deviceClass, unfilledClass, className].filter(Boolean).join(' ')
 
   function dismiss() {
     setDismissed(true)

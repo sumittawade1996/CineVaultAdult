@@ -17,14 +17,6 @@ const SORTS = {
   title: { label: 'Title A–Z', column: 'title', ascending: true },
 }
 
-// PostgREST's or() filter uses commas, parens and quotes as syntax; quote
-// the search term and drop the characters that could break out of it.
-function searchFilter(q) {
-  const safe = q.replace(/["\\]/g, '')
-  const like = `ilike."%${safe}%"`
-  return ['title', 'keywords', 'tags', 'actors', 'channel'].map((c) => `${c}.${like}`).join(',')
-}
-
 function scrollToTop() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
@@ -62,7 +54,10 @@ export default function Movies() {
         .order('created_at', { ascending: false })
         .range(from, to)
 
-      if (q) query = query.or(searchFilter(q))
+      // search_vector is a generated tsvector (title/keywords/tags/actors/
+      // channel) with a GIN index, so this hits an index instead of the
+      // five-column ILIKE-OR scan this used to run.
+      if (q) query = query.textSearch('search_vector', q, { type: 'websearch', config: 'english' })
 
       const { data, count, error: err } = await query
       if (cancelled) return

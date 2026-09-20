@@ -294,6 +294,13 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 }
 .home-heading { padding: 28px 0 4px; }
 .home-heading h1 { color: var(--text); }
+.taxonomy-intro {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 72ch;
+  margin: 16px 0 12px;
+}
 
 .section-head {
   display: flex;
@@ -410,17 +417,17 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .movie-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
-  gap: 20px;
+  gap: 4px;
 }
 @media (min-width: 1600px) {
-  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 22px; }
+  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px; }
 }
 /* Featured titles get larger cards: a stronger hierarchy on the homepage,
    and the six featured cards span two rows on desktop. */
 .movie-grid--featured { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 .movie-grid--featured .movie-title { font-size: 17px; }
 @media (max-width: 640px) {
-  .movie-grid, .movie-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 4px; row-gap: 12px; }
+  .movie-grid, .movie-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2px; row-gap: 3px; }
 }
 /* In-feed ad rendered as one full-width row of the grid. It is the 7th
    child in the DOM (after three phone rows); wider layouts reorder it to
@@ -562,6 +569,49 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 /* ============================================================
    Taxonomy grid (actors/channels/categories)
    ============================================================ */
+.taxonomy-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (max-width: 640px) {
+  .taxonomy-tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+}
+.taxonomy-tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.taxonomy-tile img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+.taxonomy-tile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.82) 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.taxonomy-tile-overlay > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taxonomy-tile:hover { border-color: var(--accent-dim); }
+.taxonomy-tile:hover img { transform: scale(1.04); }
+
 .taxonomy-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -667,6 +717,7 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 .detail-meta { font-family: var(--font-mono); color: var(--accent); font-size: 13px; margin-bottom: 18px; display: flex; gap: 14px; flex-wrap: wrap; }
 .detail-desc { color: var(--text-muted); line-height: 1.7; max-width: 680px; margin-bottom: 18px; }
 .trailer-frame {
+  position: relative;
   aspect-ratio: 16/9;
   width: 100%;
   border-radius: 8px;
@@ -679,6 +730,34 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
   scroll-margin-top: 72px;
 }
 .trailer-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+/* The embed source renders its own title bar linking back to its site at
+   the very top of the player. This sits above the iframe (which we can't
+   reach — cross-origin) purely to block clicks/visibility on that strip so
+   visitors can't be routed off VEXN from inside the player. */
+.trailer-frame-shield {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 34px;
+  background: transparent;
+  z-index: 2;
+  cursor: default;
+}
+
+/* Tightens the vertical gap between the player and "You might also like"
+   on the movie detail page specifically — scoped to this exact sequence
+   so it doesn't touch ad-slot spacing or section-head spacing anywhere
+   else on the site, and doesn't change the ads themselves.
+   Adjacent vertical margins collapse to whichever side is larger, so the
+   preceding element's margin-bottom has to be capped too (via :has) —
+   otherwise the base .ad-slot-wrap's own 32px/20px margin-bottom wins the
+   collapse and silently cancels out the margin-top reduction below. */
+.detail-hero + .ad-slot-wrap { margin-top: 16px; }
+.ad-slot-wrap + .ad-slot-wrap { margin-top: 8px; }
+.ad-slot-wrap:has(+ .ad-slot-wrap) { margin-bottom: 8px; }
+.ad-slot-wrap + .section-head { margin-top: 16px; }
+.ad-slot-wrap:has(+ .section-head) { margin-bottom: 16px; }
 
 /* ============================================================
    Ad slots (placements and reserved sizes are unchanged)
@@ -716,6 +795,15 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 .ad-slot-wrap--rectangle .ad-slot-live { min-height: 250px; max-width: 336px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
 .ad-slot-wrap--skyscraper .ad-slot,
 .ad-slot-wrap--skyscraper .ad-slot-live { min-height: 600px; display: flex; align-items: center; justify-content: center; }
+
+/* AdSlot.jsx adds this once it detects the script ran but rendered no
+   visible creative (e.g. a duplicated ad-unit id that only the first
+   instance on the page gets filled for) — stop reserving a full-size
+   empty box in that case instead of leaving a dead gap. Must come after
+   the format-specific min-height rules above to win on source order. */
+.ad-slot-wrap--unfilled,
+.ad-slot-wrap--unfilled .ad-slot,
+.ad-slot-wrap--unfilled .ad-slot-live { min-height: 0; }
 .ad-slot-wrap--skyscraper { margin-top: 20px; }
 
 @media (max-width: 640px) {

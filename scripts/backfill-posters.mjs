@@ -10,6 +10,7 @@
 
 import { readFileSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
+import { youtubeId, epornerId } from '../src/lib/poster.js'
 
 function loadDotEnv() {
   try {
@@ -29,15 +30,6 @@ if (!url || !key) {
 }
 const apply = process.argv.includes('--apply')
 const supabase = createClient(url, key)
-
-function youtubeId(u) {
-  const m = String(u || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([\w-]{11})/)
-  return m ? m[1] : null
-}
-function epornerId(u) {
-  const m = String(u || '').match(/eporner\.com\/(?:embed|hd-porn|video-)\/?([A-Za-z0-9]+)/)
-  return m ? m[1] : null
-}
 
 async function epornerThumb(id) {
   const res = await fetch(`https://www.eporner.com/api/v2/video/id/?id=${id}&thumbsize=big`, {

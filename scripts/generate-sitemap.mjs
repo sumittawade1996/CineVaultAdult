@@ -18,6 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { writeFileSync, mkdirSync } from 'fs'
+import { slugify } from '../src/lib/slugify.js'
 
 const SITE_URL = (process.env.SITE_URL || 'https://vexn.org').replace(/\/$/, '')
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
@@ -35,16 +36,6 @@ const STATIC_ROUTES = [
   { path: '/legal/dmca', changefreq: 'yearly', priority: '0.2' },
   { path: '/legal/2257', changefreq: 'yearly', priority: '0.2' },
 ]
-
-function slugify(input) {
-  return String(input)
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
 
 function xmlEscape(str) {
   return String(str)

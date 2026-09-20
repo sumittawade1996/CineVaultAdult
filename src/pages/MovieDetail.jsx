@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
@@ -62,6 +62,37 @@ export default function MovieDetail() {
     return () => { cancelled = true }
   }, [slug])
 
+  // Hooks must run unconditionally on every render, so these are computed
+  // before the early returns below (guarded with movie?.) even though
+  // they're only meaningful once a movie has loaded.
+  const tags = useMemo(() => (movie?.tags || '').split(',').map((t) => t.trim()).filter(Boolean), [movie?.tags])
+  const actors = useMemo(() => (movie?.actors || '').split(',').map((t) => t.trim()).filter(Boolean), [movie?.actors])
+  const embedUrl = useMemo(() => toEmbedUrl(movie?.trailer_url), [movie?.trailer_url])
+  const original = useMemo(() => getPosterUrl(movie), [movie])
+
+  // VideoObject (not Movie) is the schema Google expects for tube-style video
+  // pages — it's what makes the page eligible for video rich results
+  // (duration/thumbnail in search), which Movie schema doesn't grant here.
+  // Memoized: only needs to change when the movie itself changes, not on
+  // every render (e.g. poster-fallback state updates).
+  const movieJsonLd = useMemo(() => movie ? ({
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: movie.title,
+    description: movie.description || movie.seo_description || movie.title,
+    thumbnailUrl: original || undefined,
+    uploadDate: movie.created_at || undefined,
+    duration: movie.runtime_minutes ? `PT${movie.runtime_minutes}M` : undefined,
+    embedUrl: embedUrl || undefined,
+    aggregateRating:
+      movie.rating != null
+        ? { '@type': 'AggregateRating', ratingValue: movie.rating, bestRating: 10 }
+        : undefined,
+    actor: actors.length ? actors.map((name) => ({ '@type': 'Person', name })) : undefined,
+    genre: tags.length ? tags : undefined,
+    url: `${FALLBACK_SITE_URL}/movie/${movie.slug}`,
+  }) : null, [movie, original, embedUrl, actors, tags])
+
   if (notFound) {
     return (
       <div className="container" style={{ padding: '48px 0' }}>
@@ -89,29 +120,8 @@ export default function MovieDetail() {
     )
   }
 
-  const tags = (movie.tags || '').split(',').map((t) => t.trim()).filter(Boolean)
-  const actors = (movie.actors || '').split(',').map((t) => t.trim()).filter(Boolean)
-  const embedUrl = toEmbedUrl(movie.trailer_url)
-  const original = getPosterUrl(movie)
   const useCdn = posterStage === 0 && original && IMAGE_CDN
   const poster = posterStage === 2 ? null : original
-
-  const movieJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Movie',
-    name: movie.title,
-    description: movie.description || movie.seo_description || undefined,
-    image: original || undefined,
-    datePublished: movie.year ? String(movie.year) : undefined,
-    duration: movie.runtime_minutes ? `PT${movie.runtime_minutes}M` : undefined,
-    aggregateRating:
-      movie.rating != null
-        ? { '@type': 'AggregateRating', ratingValue: movie.rating, bestRating: 10 }
-        : undefined,
-    actor: actors.length ? actors.map((name) => ({ '@type': 'Person', name })) : undefined,
-    genre: tags.length ? tags : undefined,
-    url: `${FALLBACK_SITE_URL}/movie/${movie.slug}`,
-  }
 
   return (
     <>
@@ -192,6 +202,7 @@ export default function MovieDetail() {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
+                <div className="trailer-frame-shield" aria-hidden="true" />
               </div>
             )}
           </div>

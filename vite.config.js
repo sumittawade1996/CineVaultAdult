@@ -17,4 +17,19 @@ export default defineConfig({
     // prerender build rather than imported from node_modules at runtime.
     noExternal: ['react-helmet-async'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendor libraries change far less often than app code. Splitting
+        // them into their own chunk means a deploy that only touches app
+        // code doesn't force visitors to re-download React/Supabase/etc —
+        // the vendor chunk keeps its own cache-busted filename and stays
+        // cached across deploys where its contents are unchanged.
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', 'react-helmet-async'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 })
