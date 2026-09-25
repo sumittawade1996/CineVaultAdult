@@ -122,6 +122,23 @@ export const AD_SLOTS = {
   },
 
   // ---------- Movie detail ----------
+  playerOverlay: {
+    label: 'Player overlay',
+    format: 'player-overlay',
+    dismissible: true,
+    // Deliberately left null — do NOT paste the stickyMobile/footer key
+    // (2260e6c38ea6fb994bedaf818bff091f) in here. Verified locally
+    // (2026-09-25) that key's creative ignores its container: it injects a
+    // position:fixed, z-index:2147483647 iframe directly outside whatever
+    // element hosts the <script> tag and renders a fake "MESSAGES — Anna:
+    // watch this video alone" chat-notification banner across the top of
+    // the page (also rewrites the tab title). Fine as a full-width footer
+    // bar maybe, but actively wrong for a small in-player corner overlay,
+    // and arguably a bad look anywhere. Needs a real, container-respecting
+    // ad-unit key from the network (or a different network) before this
+    // slot goes live — see chat for the reused footer/stickyMobile exposure.
+    html: null,
+  },
   belowTrailer: {
     label: 'Below trailer',
     format: 'rectangle',

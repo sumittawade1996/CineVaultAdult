@@ -12,9 +12,13 @@
     "https://i\\.ytimg\\.com/.*",
   ]
 
+# Legacy pre-rebrand CineVault URL scheme (/video/:id/:slug). There's no
+# reliable old-ID → new-slug mapping, so this sends stragglers to the
+# listing page instead of the old (now-broken) "/movies/:splat" target,
+# which isn't a real route and was serving an un-noindexed soft-404.
 [[redirects]]
   from = "/video/*"
-  to = "/movies/:splat"
+  to = "/movies"
   status = 301
 
 # Public pages are prerendered to static files by scripts/prerender.mjs and

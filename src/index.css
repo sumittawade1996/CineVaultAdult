@@ -416,11 +416,11 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
    ============================================================ */
 .movie-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 4px;
 }
 @media (min-width: 1600px) {
-  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px; }
+  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: 4px; }
 }
 /* Featured titles get larger cards: a stronger hierarchy on the homepage,
    and the six featured cards span two rows on desktop. */
@@ -811,6 +811,37 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
   .ad-slot { padding: 14px; }
   .ad-slot-wrap--leaderboard .ad-slot,
   .ad-slot-wrap--leaderboard .ad-slot-live { min-height: 50px; }
+}
+
+/* Player corner overlay — sits inside .trailer-frame (which is
+   position:relative) instead of taking up its own line in the page flow.
+   Deliberately small and pinned to a corner so it never covers the
+   iframe's play/pause/seek/fullscreen controls. z-index sits above the
+   iframe and the linkout shield (z-index:2) but the dismiss button (see
+   .ad-slot-close) still lets a visitor clear it entirely. */
+.ad-slot-wrap--player-overlay {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  margin: 0;
+  max-width: 320px;
+  background: rgba(11, 13, 16, 0.85);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px;
+}
+.ad-slot-wrap--player-overlay .ad-slot,
+.ad-slot-wrap--player-overlay .ad-slot-live { min-height: 50px; }
+.ad-slot-wrap--player-overlay .ad-slot-close {
+  top: -14px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+@media (max-width: 640px) {
+  .ad-slot-wrap--player-overlay { right: 4px; bottom: 4px; max-width: 160px; }
 }
 
 /* Sticky mobile ad bar */

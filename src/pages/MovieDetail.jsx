@@ -203,6 +203,7 @@ export default function MovieDetail() {
                   allowFullScreen
                 />
                 <div className="trailer-frame-shield" aria-hidden="true" />
+                <AdSlot slot="playerOverlay" />
               </div>
             )}
           </div>
