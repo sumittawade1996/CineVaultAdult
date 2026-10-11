@@ -1,5 +1,14 @@
 User-agent: *
-Allow: /
 Disallow: /admin/
+Disallow: /search
+Allow: /
+
+User-agent: MJ12bot
+User-agent: AhrefsBot
+User-agent: AhrefsSiteAudit
+User-agent: DataForSeoBot
+User-agent: SemrushBot
+User-agent: meta-externalagent
+Disallow: /
 
 Sitemap: https://vexn.org/sitemap.xml

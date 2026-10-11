@@ -10,6 +10,11 @@
     "https://static-eu-cdn\\.eporner\\.com/.*",
     "https://imggen\\.eporner\\.com/.*",
     "https://i\\.ytimg\\.com/.*",
+    # Posters for the AI-channel movies (signed URLs) and one older Eporner
+    # poster. Not allow-listed before, so the Image CDN answered 400 and the
+    # card had to fall back to the raw image.
+    "https://pix-egi\\.phncdn\\.com/.*",
+    "https://static\\.eporner\\.com/.*",
   ]
 
 # Legacy pre-rebrand CineVault URL scheme (/video/:id/:slug). There's no
@@ -19,6 +24,317 @@
 [[redirects]]
   from = "/video/*"
   to = "/movies"
+  status = 301
+
+# Browsers and crawlers request /favicon.ico by default even though the page
+# links /favicon.svg; without this it fell through to the SPA shell below
+# and was served as a 200 HTML page. Must stay above the catch-all.
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/favicon.svg"
+  status = 301
+
+# Movie slugs that contained step-family words were renamed (2026-10-09).
+# Old URLs may be indexed or linked externally, so keep them alive with 301s.
+# Must stay above the catch-all rule below.
+[[redirects]]
+  from = "/movie/sweet-cheating-with-stepson-reagan-foxx"
+  to = "/movie/a-sweet-cheating-affair-reagan-foxx"
+  status = 301
+
+[[redirects]]
+  from = "/movie/latina-milf-share-bed-stepson-monique-fuentes"
+  to = "/movie/latina-milf-shares-a-bed-monique-fuentes"
+  status = 301
+
+[[redirects]]
+  from = "/movie/milky-boobs-stepson-private-room"
+  to = "/movie/boobs-licking-in-the-private-room"
+  status = 301
+
+[[redirects]]
+  from = "/movie/son-fucks-stepmom-family-fucked-kourtney-love"
+  to = "/movie/hot-milf-kourtney-love"
+  status = 301
+
+[[redirects]]
+  from = "/movie/step-mom-and-stepson-and-morning-wood-narration-version"
+  to = "/movie/morning-wood-roleplay-narration-version"
+  status = 301
+
+[[redirects]]
+  from = "/movie/obey-my-step-son"
+  to = "/movie/obey-me-2010"
+  status = 301
+
+[[redirects]]
+  from = "/movie/big-boobs-milky-stepmom-stepson"
+  to = "/movie/big-boobs-indian-milf-gets-seduced"
+  status = 301
+
+[[redirects]]
+  from = "/movie/indian-step-daughter-step-dad-srimoyee"
+  to = "/movie/srimoyee-by-an-older-man-hindi-audio"
+  status = 301
+
+[[redirects]]
+  from = "/movie/chitose-saegusa-forbidden-stepmom-erotic"
+  to = "/movie/chitose-saegusa-erotic-milf-romance"
+  status = 301
+
+[[redirects]]
+  from = "/movie/curvy-stepsister-has-to-share-single-bed-with-stepbrother-at-hotel-because-only-one-room-left-ai-generated"
+  to = "/movie/curvy-roommates-share-hotel-bed-ai-generated"
+  status = 301
+
+[[redirects]]
+  from = "/movie/dee-williams-perv-stepson-spying-stepmom"
+  to = "/movie/dee-williams-caught-spying"
+  status = 301
+
+[[redirects]]
+  from = "/movie/hot-pearl5-petite-stepsister-creampie"
+  to = "/movie/hot-pearl5-petite-asian"
+  status = 301
+
+[[redirects]]
+  from = "/movie/juan-loco-dee-williams-stepmom-sex-lessons"
+  to = "/movie/juan-loco-dee-williams-milf-sex-lessons"
+  status = 301
+
+[[redirects]]
+  from = "/movie/abbey-brooks-daughter-catches-stepmom"
+  to = "/movie/caught-with-her-boyfriend-abbey-brooks"
+  status = 301
+
+[[redirects]]
+  from = "/movie/nikki-sexx-super-busty-milf-wants-stepson"
+  to = "/movie/nikki-sexx-super-busty-milf"
+  status = 301
+
+[[redirects]]
+  from = "/movie/hardcore-rough-sex-stepsister-indian"
+  to = "/movie/hardcore-sex-with-a-big-boobs-roommate"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepbrother-fucked-not-stepsister-family-vacation-resort"
+  to = "/movie/abella-danger-resort-scene"
+  status = 301
+
+[[redirects]]
+  from = "/movie/snuck-into-his-stepsisters-room"
+  to = "/movie/snuck-into-her-room"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepmom-will-take-care-jennifer-white"
+  to = "/movie/this-milf-will-take-care-of-you-jennifer-white"
+  status = 301
+
+[[redirects]]
+  from = "/movie/trying-to-make-a-good-first-impression-on-my-stepmother"
+  to = "/movie/trying-to-make-a-good-first-impression"
+  status = 301
+
+[[redirects]]
+  from = "/movie/emily-willis-stepsister-dick-pic"
+  to = "/movie/things-escalate-quickly-after-a-racy-text-emily-willis"
+  status = 301
+
+[[redirects]]
+  from = "/movie/confession-my-stepson-fucked-me-in-the-hotel-bed-thinking-i-was-his-stepsister"
+  to = "/movie/confession-hotel-room-mix-up"
+  status = 301
+
+[[redirects]]
+  from = "/movie/the-american-step-sister"
+  to = "/movie/the-american-roommate"
+  status = 301
+
+[[redirects]]
+  from = "/movie/shinohara-iyo-stepfather-shower-uncensored"
+  to = "/movie/shinohara-iyo-shower-scene-uncensored"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepmom-lilly-james-canada"
+  to = "/movie/sexy-milf-lilly-james"
+  status = 301
+
+[[redirects]]
+  from = "/movie/miyu-imai-stepson-uncensored"
+  to = "/movie/miyu-imai-uncensored-jav-feature"
+  status = 301
+
+[[redirects]]
+  from = "/movie/big-titty-stepsister-massage-cubbi-thompson"
+  to = "/movie/big-titty-massage-turns-into-more-cubbi-thompson"
+  status = 301
+
+[[redirects]]
+  from = "/movie/virgin-step-daughter-first-time-coco-lovelock"
+  to = "/movie/coco-lovelock-gets-curious-on-camera"
+  status = 301
+
+[[redirects]]
+  from = "/movie/sugar-step-daddy-college-girl"
+  to = "/movie/desi-hardcore-sex-bhabhi"
+  status = 301
+
+[[redirects]]
+  from = "/movie/lesbian-babe-stepsister-in-law-game-room-serena-blair-bunny-colby"
+  to = "/movie/lesbian-babes-locked-in-a-game-room-serena-blair"
+  status = 301
+
+[[redirects]]
+  from = "/movie/unsatisfied-stepmom-charlie-forde"
+  to = "/movie/unsatisfied-milf-charlie-forde"
+  status = 301
+
+[[redirects]]
+  from = "/movie/adriana-chechik-elexis-monroe-squirt-stepmom"
+  to = "/movie/squirt-waterfall-elexis-monroe-adriana-chechik"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepmom-and-stepson-no-rules-left-narration-version"
+  to = "/movie/no-rules-left-narration-version"
+  status = 301
+
+[[redirects]]
+  from = "/movie/lauren-phillips-busty-stepmom"
+  to = "/movie/this-busty-milf-again-and-again-lauren-phillips"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepmom-comatozze-asks-stepson-for-a-massage"
+  to = "/movie/comatozze-asks-for-a-massage"
+  status = 301
+
+[[redirects]]
+  from = "/movie/anissa-kate-best-stepmom-ever"
+  to = "/movie/anissa-kate-milf-fantasy-scene"
+  status = 301
+
+[[redirects]]
+  from = "/movie/crystal-chase-stepmom-take-shower"
+  to = "/movie/crystal-chase-caught-in-the-shower"
+  status = 301
+
+[[redirects]]
+  from = "/movie/lindsay-lee-stepmom-shopping-list"
+  to = "/movie/lindsay-lee-her-shopping-list"
+  status = 301
+
+[[redirects]]
+  from = "/movie/monique-fuentes-colombian-stepmother-lesson"
+  to = "/movie/colombian-milf-gives-a-sex-lesson-monique-fuentes"
+  status = 301
+
+[[redirects]]
+  from = "/movie/sharing-bed-husband-stepson-mistake"
+  to = "/movie/big-tits-homemade-bed-sharing"
+  status = 301
+
+[[redirects]]
+  from = "/movie/lauren-phillips-spikey-dee-stepmom-gf-video"
+  to = "/movie/lauren-phillips-spikey-dee-milf-video"
+  status = 301
+
+[[redirects]]
+  from = "/movie/mom-love-stepson-blair-williams"
+  to = "/movie/blair-williams-arya-fae-milf-scene"
+  status = 301
+
+[[redirects]]
+  from = "/movie/yuu-shinoda-stepmom-agreed-to-have-sex"
+  to = "/movie/yuu-shinoda-uncensored-jav-milf"
+  status = 301
+
+[[redirects]]
+  from = "/movie/asian-stepmom-perfect-tits"
+  to = "/movie/this-asian-milf-has-perfect-tits"
+  status = 301
+
+[[redirects]]
+  from = "/movie/busty-asian-stepmom-huge-tits"
+  to = "/movie/this-busty-asian-milf-has-huge-tits"
+  status = 301
+
+[[redirects]]
+  from = "/movie/chitose-yura-forbidden-stepmom-erotic"
+  to = "/movie/chitose-yura-erotic-milf-romance"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepmom-sharing-bed-with-son-brooklyn-chase"
+  to = "/movie/milf-sharing-a-bed-brooklyn-chase"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stepmothers-rough-threesome-monique-fuentes"
+  to = "/movie/milfs-threesome-monique-fuentes"
+  status = 301
+
+[[redirects]]
+  from = "/movie/stuck-up-stepmom-cory-chase-xander-corvus"
+  to = "/movie/stuck-up-milf-cory-chase-xander-corvus"
+  status = 301
+
+[[redirects]]
+  from = "/movie/nuru-massage-helps-seduce-stepson-in-the-shower"
+  to = "/movie/nuru-massage-leads-to-a-shower-seduction"
+  status = 301
+
+[[redirects]]
+  from = "/movie/teach-little-stepsister-cell-phone-huge-cock"
+  to = "/movie/teaching-her-how-to-play-on-the-cell-phone"
+  status = 301
+
+[[redirects]]
+  from = "/movie/menopausal-step-mommy-orgy-cory-chase"
+  to = "/movie/mature-milf-orgy-cory-chase"
+  status = 301
+
+[[redirects]]
+  from = "/movie/lauren-phillips-sneaky-stepmom"
+  to = "/movie/lauren-phillips-sneaky-milf"
+  status = 301
+
+[[redirects]]
+  from = "/movie/katalina-kyle-sneaky-sex-with-step-sister"
+  to = "/movie/katalina-kyle-sneaky-sex-with-your-sweet-roommate"
+  status = 301
+
+[[redirects]]
+  from = "/movie/cant-resist-my-step-sisters-huge-ass-comatozze"
+  to = "/movie/cant-resist-her-huge-ass-comatozze"
+  status = 301
+
+[[redirects]]
+  from = "/movie/my-stepsister-love-doing-it-solo"
+  to = "/movie/american-amateur-loves-doing-it-solo"
+  status = 301
+
+[[redirects]]
+  from = "/movie/teen-stepsister-fuck-pussy-lia-little"
+  to = "/movie/lia-little-amateur"
+  status = 301
+
+[[redirects]]
+  from = "/movie/krissy-lynn-kamryn-jade-step-father-figure"
+  to = "/movie/krissy-lynn-kamryn-jade-milf-threesome"
+  status = 301
+
+[[redirects]]
+  from = "/movie/latina-babe-bath-step-brother-johnny-love"
+  to = "/movie/latina-babe-takes-a-bath-johnny-love"
+  status = 301
+
+[[redirects]]
+  from = "/movie/the-end-of-oak-street2"
+  to = "/movie/the-end-of-oak-street"
   status = 301
 
 # Public pages are prerendered to static files by scripts/prerender.mjs and

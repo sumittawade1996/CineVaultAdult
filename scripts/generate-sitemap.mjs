@@ -171,9 +171,22 @@ async function main() {
   const totalUrls = STATIC_ROUTES.length + movies.length + articles.length + actorRoutes.length + categoryRoutes.length + channelRoutes.length
   console.log(`[sitemap] wrote sitemap.xml (index) + 4 sub-sitemaps — ${totalUrls} URLs total`)
 
+  // Keep this list in sync with the bot findings in the Oct 2026 Netlify audit:
+  // ~88% of requests were non-browser. robots.txt is advisory (bad bots ignore
+  // it), but these crawlers honour it. Link-preview fetchers (facebookexternalhit,
+  // Twitterbot) are deliberately NOT listed so X/Facebook cards keep working.
   const robots = `User-agent: *
-Allow: /
 Disallow: /admin/
+Disallow: /search
+Allow: /
+
+User-agent: MJ12bot
+User-agent: AhrefsBot
+User-agent: AhrefsSiteAudit
+User-agent: DataForSeoBot
+User-agent: SemrushBot
+User-agent: meta-externalagent
+Disallow: /
 
 Sitemap: ${SITE_URL}/sitemap.xml
 `

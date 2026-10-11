@@ -1,12 +1,15 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from './supabase'
+import { isBot } from './isBot'
 
 // Minimal first-party pageview logging into Supabase (see the
 // `page_views` table/migration) — chosen over a third-party tool like
 // Plausible or Umami because those require signing up for a hosted
 // account, which isn't something that can be done on the site owner's
 // behalf. No cookies, no personal data: just path, referrer, and time.
+// Crawlers and headless browsers are skipped (see ./isBot) so the numbers
+// reflect people, not the many bots that execute JavaScript.
 // The table has no public SELECT policy, so this data can only be read
 // from the Supabase dashboard/SQL editor, not through the site itself.
 //
@@ -20,7 +23,7 @@ export function useTrackPageView() {
   const { pathname, search } = useLocation()
 
   useEffect(() => {
-    if (!isTrackedHost() || pathname.startsWith('/admin')) return
+    if (!isTrackedHost() || pathname.startsWith('/admin') || isBot()) return
     supabase
       .from('page_views')
       .insert({ path: pathname + search, referrer: document.referrer || null })

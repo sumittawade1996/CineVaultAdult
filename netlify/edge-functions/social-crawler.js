@@ -29,6 +29,18 @@ function posterUrl(movie) {
   return yt ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : null
 }
 
+// imggen.eporner.com posters (1920x1080 originals) showed up as a blank,
+// image-less link card in X's composer even though the file itself loads
+// fine from a normal client. Serving them through Netlify's Image CDN (a
+// resized JPEG on our own domain) sidesteps whatever X's fetcher trips on.
+// Other poster hosts rendered fine and are left untouched.
+function cardImage(url) {
+  if (url && /^https:\/\/imggen\.eporner\.com\//.test(url)) {
+    return `${SITE_URL}/.netlify/images?url=${encodeURIComponent(url)}&w=1200&fm=jpg&q=80`
+  }
+  return url
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -64,7 +76,7 @@ export default async (request) => {
 
   const title = movie.seo_title || movie.title
   const description = movie.seo_description || movie.description || `Watch ${movie.title} free on ${SITE_NAME}.`
-  const image = posterUrl(movie)
+  const image = cardImage(posterUrl(movie))
   const canonical = `${SITE_URL}${url.pathname}`
 
   const html = `<!doctype html>
