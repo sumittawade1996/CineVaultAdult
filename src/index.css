@@ -192,6 +192,22 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 }
 .nav-social:hover, .icon-btn:hover { color: var(--accent); background: var(--surface); }
 .nav-admin { margin-left: 6px; }
+.nav-watch { margin-right: 4px; white-space: nowrap; }
+.nav-watch-mobile { display: none; margin-left: auto; gap: 6px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Homepage quick-watch row (continue / favourite / Indian) */
+.watch-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.watch-btn { min-height: 44px; padding: 8px 16px; max-width: 100%; }
+.watch-btn-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; text-align: left; }
+.watch-btn-text small {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .active-users {
   display: inline-flex;
@@ -261,8 +277,8 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 }
 @media (max-width: 860px) {
   .nav-links, .nav-search-form, .nav-aside { display: none; }
-  .nav-toggle, .nav-mobile-search { display: inline-flex; }
-  .nav-mobile-search { margin-left: auto; }
+  .nav-toggle, .nav-mobile-search, .nav-watch-mobile { display: inline-flex; }
+  .nav-mobile-search { margin-left: 0; }
   .nav-toggle { margin-left: 0; }
   .mobile-menu[data-open="true"] { display: block; }
   .mobile-menu .nav-aside { display: flex; }
@@ -815,14 +831,15 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 
 /* Player corner overlay — sits inside .trailer-frame (which is
    position:relative) instead of taking up its own line in the page flow.
-   Deliberately small and pinned to a corner so it never covers the
-   iframe's play/pause/seek/fullscreen controls. z-index sits above the
-   iframe and the linkout shield (z-index:2) but the dismiss button (see
-   .ad-slot-close) still lets a visitor clear it entirely. */
+   Deliberately small and pinned to the top-right corner, just below the
+   34px linkout shield, so it stays clear of the bottom control bar
+   (play/pause/seek/quality/fullscreen). z-index sits above the iframe and
+   the shield (z-index:2) but the dismiss button (see .ad-slot-close) still
+   lets a visitor clear it entirely. */
 .ad-slot-wrap--player-overlay {
   position: absolute;
   right: 8px;
-  bottom: 8px;
+  top: 42px;
   z-index: 4;
   margin: 0;
   max-width: 320px;
@@ -841,7 +858,7 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
   font-size: 14px;
 }
 @media (max-width: 640px) {
-  .ad-slot-wrap--player-overlay { right: 4px; bottom: 4px; max-width: 160px; }
+  .ad-slot-wrap--player-overlay { right: 4px; top: 38px; max-width: 160px; }
 }
 
 /* Sticky mobile ad bar */
@@ -859,23 +876,6 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 }
 .ad-slot-wrap--sticky .ad-slot { border: none; padding: 4px; min-height: 50px; }
 
-/* Social bar: Adsterra's own script injects a small self-positioning
-   floating widget (fixed corner icon, expands/collapses on its own) —
-   our wrapper must take zero layout space so it never pushes on content. */
-.ad-slot-wrap--social-bar {
-  /* fixed + zero-size so it sits in the viewport (not wherever it falls in
-     document flow) — the IntersectionObserver in AdSlot.jsx needs it to be
-     on-screen immediately, otherwise a widget meant to float persistently
-     wouldn't load until a visitor scrolled to the very bottom of the page */
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
-  overflow: visible;
-}
-.ad-slot-wrap--social-bar .ad-slot-live { width: auto; display: contents; }
 .ad-slot-close {
   position: absolute;
   top: 50%;

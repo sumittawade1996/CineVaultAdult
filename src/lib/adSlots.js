@@ -72,14 +72,10 @@ export const AD_SLOTS = {
 </script>
 <script src="https://supportiveinvoicevarnish.com/2260e6c38ea6fb994bedaf818bff091f/invoke.js"></script>`, // shows just above the site footer on every non-admin page
   },
-  socialBar: {
-    label: 'Social bar',
-    format: 'social-bar',
-    html: `<script src="https://supportiveinvoicevarnish.com/f0/10/13/f010135b24ae94e9bf9be88f3d51e2ed.js"></script>`,
-    // Adsterra's own self-positioning floating widget (small corner icon,
-    // expands/collapses via its own UI) — no dismiss button of ours layered
-    // on top, and no reserved layout space (see .ad-slot-wrap--social-bar).
-  },
+  // The Adsterra "social bar" script (f010135b…js) was removed on 2026-10-11:
+  // it injected a fake "MESSAGES — Anna: watch this video alone" notification
+  // and changed the tab title to "(1) New Message!", a deceptive-ad pattern
+  // that risks X / Google flagging the domain. Do not re-add it.
 
   // ---------- Homepage ----------
   homeLeaderboard: {
@@ -126,18 +122,26 @@ export const AD_SLOTS = {
     label: 'Player overlay',
     format: 'player-overlay',
     dismissible: true,
-    // Deliberately left null — do NOT paste the stickyMobile/footer key
-    // (2260e6c38ea6fb994bedaf818bff091f) in here. Verified locally
-    // (2026-09-25) that key's creative ignores its container: it injects a
-    // position:fixed, z-index:2147483647 iframe directly outside whatever
-    // element hosts the <script> tag and renders a fake "MESSAGES — Anna:
-    // watch this video alone" chat-notification banner across the top of
-    // the page (also rewrites the tab title). Fine as a full-width footer
-    // bar maybe, but actively wrong for a small in-player corner overlay,
-    // and arguably a bad look anywhere. Needs a real, container-respecting
-    // ad-unit key from the network (or a different network) before this
-    // slot goes live — see chat for the reused footer/stickyMobile exposure.
-    html: null,
+    desktopOnly: true, // phones already get this same ad in the sticky bottom bar
+    // Same Adsterra unit as `footer` / `stickyMobile` (320x50), at the
+    // site owner's request (2026-10-09). Loaded on its own (2026-10-09 test
+    // page, no other ad scripts) this unit renders as a normal 320x50 iframe
+    // inside its container — no fixed overlay, no tab-title change — as do
+    // the header, sidebar and 5de161 native units. The page-wide fake
+    // "MESSAGES" notification and "(1) New Message!" tab title came from
+    // the since-removed social-bar script, not this key.
+    // Shown top-right (below the player's link-out shield), desktop only —
+    // phones already get this same ad in the sticky bottom bar.
+    html: `<script>
+  atOptions = {
+    'key' : '2260e6c38ea6fb994bedaf818bff091f',
+    'format' : 'iframe',
+    'height' : 50,
+    'width' : 320,
+    'params' : {}
+  };
+</script>
+<script src="https://supportiveinvoicevarnish.com/2260e6c38ea6fb994bedaf818bff091f/invoke.js"></script>`,
   },
   belowTrailer: {
     label: 'Below trailer',

@@ -7,6 +7,7 @@ import MovieGrid from '../components/MovieGrid'
 import AdSlot from '../components/AdSlot'
 import Seo from '../components/Seo'
 import CardSkeletonGrid from '../components/CardSkeletonGrid'
+import WatchShortcut from '../components/WatchShortcut'
 import { SITE_NAME, SOCIAL_LINKS, FALLBACK_SITE_URL } from '../lib/siteConfig'
 
 const homeJsonLd = [
@@ -64,6 +65,7 @@ export default function Home() {
       />
       <div className="container home-heading">
         <h1>Big Tits, Top Performers, New Scenes Daily</h1>
+        <WatchShortcut variant="hero" />
       </div>
 
       <div className="container">

@@ -7,6 +7,7 @@ import { getPosterUrl, IMAGE_CDN, optimizedPosterUrl, posterSrcSet } from '../li
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { isAdminAuthed } from '../lib/adminAuth'
 import { usePreload } from '../lib/preload'
+import { recordWatch } from '../lib/watchHistory'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 import MovieGrid from '../components/MovieGrid'
@@ -61,6 +62,10 @@ export default function MovieDetail() {
     load()
     return () => { cancelled = true }
   }, [slug])
+
+  // Remember this video on the visitor's own device for the header's
+  // "Continue watching" / "More <favourite>" shortcut buttons.
+  useEffect(() => { if (movie?.slug) recordWatch(movie) }, [movie?.slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hooks must run unconditionally on every render, so these are computed
   // before the early returns below (guarded with movie?.) even though
