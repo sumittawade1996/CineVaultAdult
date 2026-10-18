@@ -102,6 +102,15 @@ export const AD_SLOTS = {
 <div id="container-5de161d2a3fd4a9ee2823cd1195c61f7"></div>
 `, // shows in every movie grid
   },
+  // Desktop only (960px and wider): right of the intro on performer, channel and category pages.
+  // Leave `html` null until you have a 300x250 unit for it: the page then shows poster picks in
+  // that space and no placeholder box. A unit pasted here replaces one of the two picks.
+  taxonomyRail: {
+    label: 'Performer, channel and category page, right of the intro',
+    format: 'rectangle',
+    desktopOnly: true,
+    html: null,
+  },
   listingTop: {
     label: 'Above movie list',
     format: 'leaderboard',

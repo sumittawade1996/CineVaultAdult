@@ -8,7 +8,8 @@ import AdSlot from '../components/AdSlot'
 
 const TILE_COUNT = 20
 
-export default function TaxonomyList({ field, single, title, basePath, description, withImages }) {
+// `title` is the visible heading; `seoTitle` (optional) is the longer search-result title.
+export default function TaxonomyList({ field, single, title, seoTitle, basePath, description, withImages }) {
   const pre = usePreload()
   const [items, setItems] = useState(pre?.items ?? [])
   const [loading, setLoading] = useState(!pre)
@@ -39,7 +40,7 @@ export default function TaxonomyList({ field, single, title, basePath, descripti
 
   return (
     <>
-      <Seo title={title} description={description} />
+      <Seo title={seoTitle || title} description={description} />
       <div className="container">
         <div className="page-head">
           <div>

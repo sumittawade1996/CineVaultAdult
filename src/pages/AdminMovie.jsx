@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
+import { checkContent, describe } from '../lib/contentRules'
 import { getPosterUrl } from '../lib/poster'
+import { sourceFromUrl } from '../lib/source'
+import { normalizeTags } from '../lib/categories'
+import { DEFAULT_CHANNEL } from '../lib/siteConfig'
 import Seo from '../components/Seo'
 
 const EMPTY = {
@@ -106,14 +110,22 @@ export default function AdminMovie() {
       trailer_url: trailerUrl,
       description: form.description.trim() || null,
       keywords: form.keywords.trim() || null,
-      tags: form.tags.trim() || null,
+      tags: normalizeTags(form.tags).tags || null, // alias spellings rewritten (src/lib/categories.js)
       actors: form.actors.trim() || null,
-      channel: form.channel.trim() || null,
+      channel: form.channel.trim() || DEFAULT_CHANNEL,
+      source: sourceFromUrl(trailerUrl), // the site that hosts the player (migration 013)
       rating: form.rating ? Number(form.rating) : null,
       runtime_minutes: form.runtime_minutes ? Number(form.runtime_minutes) : null,
       featured: form.featured,
       seo_title: form.seo_title.trim() || null,
       seo_description: form.seo_description.trim() || null,
+    }
+
+    const hits = checkContent(entry)
+    if (hits.block.length) {
+      setLog({ type: 'err', msg: `Not saved: ${describe(hits.block)}. VEXN does not publish these themes; change the title, tags or description.` })
+      setBusy(false)
+      return
     }
 
     const { error } = editingId
@@ -128,7 +140,18 @@ export default function AdminMovie() {
     if (error) {
       setLog({ type: 'err', msg: `Save failed: ${error.message}` })
     } else {
-      setLog({ type: 'ok', msg: `Saved "${entry.title}" (/movie/${entry.slug}).` })
+      setLog({
+        type: 'ok',
+        msg: `Saved "${entry.title}" (/movie/${entry.slug}).${hits.review.length ? ` Needs a look: ${describe(hits.review)}.` : ''}`,
+      })
+      if (editingId && editSlug && editSlug !== entry.slug) {
+        // The title (and so the slug) changed: keep the old URL alive with a
+        // 301 to the new one (served by netlify/edge-functions/movie-gate.js).
+        await supabase.from('removed_movies').upsert(
+          { slug: editSlug, redirect_to: `/movie/${entry.slug}`, reason: 'renamed in admin' },
+          { onConflict: 'slug' }
+        )
+      }
       if (editingId) {
         // Stay in edit mode but point the URL at the (possibly new) slug.
         navigate(`/admin/movie?slug=${entry.slug}`, { replace: true })
@@ -149,6 +172,14 @@ export default function AdminMovie() {
     if (error) {
       setLog({ type: 'err', msg: `Delete failed: ${error.message}` })
     } else {
+      // Record the removal so the old URL answers 410 Gone instead of the
+      // app shell's 200 (served by netlify/edge-functions/movie-gate.js).
+      if (editSlug) {
+        await supabase.from('removed_movies').upsert(
+          { slug: editSlug, reason: 'deleted in admin' },
+          { onConflict: 'slug' }
+        )
+      }
       navigate('/admin/movie', { replace: true })
     }
   }
@@ -229,7 +260,7 @@ export default function AdminMovie() {
 
           <div className="admin-form-row">
             <label>
-              Channel
+              Channel <span className="hint">(studio or app; leave blank for {DEFAULT_CHANNEL})</span>
               <input type="text" value={form.channel} onChange={(e) => update('channel', e.target.value)} />
             </label>
             <label>

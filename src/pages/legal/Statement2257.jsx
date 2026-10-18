@@ -13,7 +13,7 @@ export default function Statement2257() {
   return (
     <LegalPage
       title="18 U.S.C. 2257 Exemption Statement"
-      description={`Record-keeping compliance statement for ${SITE_NAME}.`}
+      description={`Record-keeping compliance statement for ${SITE_NAME} under 18 U.S.C. 2257: the exemption claim, records custodians and how to report a concern.`}
       updated="September 2026"
     >
       <h2>Notice</h2>

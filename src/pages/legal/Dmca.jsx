@@ -9,7 +9,7 @@ export default function Dmca() {
   return (
     <LegalPage
       title="DMCA Policy"
-      description={`How to submit a copyright takedown notice for content on ${SITE_NAME}.`}
+      description={`How to send a copyright (DMCA) takedown notice for content on ${SITE_NAME}: what to include, where to send it, and how counter-notices work.`}
       updated="September 2026"
     >
       <h2>1. Our position</h2>

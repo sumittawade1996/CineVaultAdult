@@ -17,6 +17,12 @@ export function PreloadProvider({ value, children }) {
   return <PreloadContext.Provider value={value}>{children}</PreloadContext.Provider>
 }
 
+// Footer partner rows embedded at build time (any page, not tied to the URL).
+export function usePreloadPartners() {
+  const preload = useContext(PreloadContext)
+  return Array.isArray(preload?.partners) ? preload.partners : null
+}
+
 export function usePreload() {
   const preload = useContext(PreloadContext)
   const { pathname, search } = useLocation()

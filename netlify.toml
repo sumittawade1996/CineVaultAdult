@@ -37,6 +37,10 @@
 # Movie slugs that contained step-family words were renamed (2026-10-09).
 # Old URLs may be indexed or linked externally, so keep them alive with 301s.
 # Must stay above the catch-all rule below.
+# Movies that were removed outright are not listed here: they live in the
+# public.removed_movies table and netlify/edge-functions/movie-gate.js answers
+# them with a 410 (or a 301 to a close performer/channel page). Unknown movie
+# slugs get a 404 from the same function instead of the app shell's 200.
 [[redirects]]
   from = "/movie/sweet-cheating-with-stepson-reagan-foxx"
   to = "/movie/a-sweet-cheating-affair-reagan-foxx"
@@ -248,11 +252,6 @@
   status = 301
 
 [[redirects]]
-  from = "/movie/yuu-shinoda-stepmom-agreed-to-have-sex"
-  to = "/movie/yuu-shinoda-uncensored-jav-milf"
-  status = 301
-
-[[redirects]]
   from = "/movie/asian-stepmom-perfect-tits"
   to = "/movie/this-asian-milf-has-perfect-tits"
   status = 301
@@ -260,6 +259,137 @@
 [[redirects]]
   from = "/movie/busty-asian-stepmom-huge-tits"
   to = "/movie/this-busty-asian-milf-has-huge-tits"
+  status = 301
+
+# "Eporner", "PornHub" and "YouTube" were source labels, not channels; the
+# channel column is empty for those videos now (migration 013) and the source is
+# stored in `source`. Keep the old channel URLs alive.
+[[redirects]]
+  from = "/channel/eporner"
+  to = "/channels"
+  status = 301
+
+[[redirects]]
+  from = "/channel/pornhub"
+  to = "/channels"
+  status = 301
+
+[[redirects]]
+  from = "/channel/youtube"
+  to = "/channels"
+  status = 301
+
+# Tag variants merged into the controlled category list (src/lib/categories.js,
+# 2026-10-18): the old category pages 301 to the standard one.
+[[redirects]]
+  from = "/category/nuru"
+  to = "/category/nuru-massage"
+  status = 301
+
+[[redirects]]
+  from = "/category/housewife"
+  to = "/category/housewives"
+  status = 301
+
+[[redirects]]
+  from = "/category/romance"
+  to = "/category/romantic"
+  status = 301
+
+[[redirects]]
+  from = "/category/hindi-audio"
+  to = "/category/hindi"
+  status = 301
+
+[[redirects]]
+  from = "/category/60-fps"
+  to = "/category/60fps"
+  status = 301
+
+[[redirects]]
+  from = "/category/web-series-2024"
+  to = "/category/web-series"
+  status = 301
+
+[[redirects]]
+  from = "/category/web-series-2026"
+  to = "/category/web-series"
+  status = 301
+
+[[redirects]]
+  from = "/category/cheating-wife"
+  to = "/category/cheating"
+  status = 301
+
+[[redirects]]
+  from = "/category/infidelity"
+  to = "/category/cheating"
+  status = 301
+
+[[redirects]]
+  from = "/category/affair"
+  to = "/category/cheating"
+  status = 301
+
+[[redirects]]
+  from = "/category/gangbang"
+  to = "/category/group-sex"
+  status = 301
+
+[[redirects]]
+  from = "/category/orgy"
+  to = "/category/group-sex"
+  status = 301
+
+[[redirects]]
+  from = "/category/fat"
+  to = "/category/bbw"
+  status = 301
+
+[[redirects]]
+  from = "/category/smooch"
+  to = "/category/kissing"
+  status = 301
+
+# The Chinese-Movie channel was emptied on 2026-10-18 (its rows are Japanese
+# videos and moved to JAV Movies); keep the old channel URL alive.
+[[redirects]]
+  from = "/channel/chinese-movie"
+  to = "/channel/jav-movies"
+  status = 301
+
+# Articles merged into a longer guide (2026-10-18): the old URL 301s to the guide.
+[[redirects]]
+  from = "/article/hindi-web-series-desi-romance-starter-guide"
+  to = "/article/guide-to-desi-bhabhi-videos"
+  status = 301
+
+[[redirects]]
+  from = "/article/why-desi-content-is-dominating-search-right-now"
+  to = "/article/guide-to-desi-bhabhi-videos"
+  status = 301
+
+[[redirects]]
+  from = "/article/inside-the-nuru-massage-genre-why-it-keeps-growing"
+  to = "/article/nuru-massage-101-genre-explained"
+  status = 301
+
+# Articles taken offline (published = false, 2026-10-18). Without a rule they
+# would answer the app shell with HTTP 200; send readers and crawlers to the
+# article list instead. Must stay above the catch-all rule below.
+[[redirects]]
+  from = "/article/stepmom-stepsister-fantasy-genre-explained"
+  to = "/articles"
+  status = 301
+
+[[redirects]]
+  from = "/article/roleplay-and-taboo-fantasy-genres-explained"
+  to = "/articles"
+  status = 301
+
+[[redirects]]
+  from = "/article/beyond-the-screen-how-authentic-connection-built-my-onlyfans-community"
+  to = "/articles"
   status = 301
 
 [[redirects]]
@@ -309,7 +439,7 @@
 
 [[redirects]]
   from = "/movie/cant-resist-my-step-sisters-huge-ass-comatozze"
-  to = "/movie/cant-resist-her-huge-ass-comatozze"
+  to = "/channel/comatozze"
   status = 301
 
 [[redirects]]
@@ -366,3 +496,10 @@
   for = "/app.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# Every response is labelled as adult content (RTA label), matching the
+# <meta name="rating"> tag that <Seo> puts on every page.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Rating = "RTA-5042-1996-1400-1577-RTA"

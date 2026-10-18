@@ -14,11 +14,15 @@ import Movies from './pages/Movies'
 // pay an extra round-trip before it can fetch data; everything else is
 // downloaded on first visit.
 const MovieDetail = lazy(() => import('./pages/MovieDetail'))
+const NewVideos = lazy(() => import('./pages/NewVideos'))
+const Partners = lazy(() => import('./pages/Partners'))
 const Articles = lazy(() => import('./pages/Articles'))
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'))
 const AdminUpload = lazy(() => import('./pages/AdminUpload'))
 const AdminArticle = lazy(() => import('./pages/AdminArticle'))
 const AdminMovie = lazy(() => import('./pages/AdminMovie'))
+const AdminContent = lazy(() => import('./pages/AdminContent'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const Actors = lazy(() => import('./pages/Actors'))
 const ActorDetail = lazy(() => import('./pages/ActorDetail'))
 const Channels = lazy(() => import('./pages/Channels'))
@@ -55,6 +59,9 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/movies" element={<Movies />} />
             <Route path="/movie/:slug" element={<MovieDetail />} />
+            <Route path="/new" element={<NewVideos />} />
+            <Route path="/new/:week" element={<NewVideos />} />
+            <Route path="/partners" element={<Partners />} />
             <Route path="/articles" element={<Articles />} />
             <Route path="/article/:slug" element={<ArticleDetail />} />
             <Route path="/actors" element={<Actors />} />
@@ -66,6 +73,8 @@ export default function App() {
             <Route path="/admin/upload" element={<RequireAdmin><AdminUpload /></RequireAdmin>} />
             <Route path="/admin/article" element={<RequireAdmin><AdminArticle /></RequireAdmin>} />
             <Route path="/admin/movie" element={<RequireAdmin><AdminMovie /></RequireAdmin>} />
+            <Route path="/admin/content" element={<RequireAdmin><AdminContent /></RequireAdmin>} />
+            <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/privacy" element={<Privacy />} />
             <Route path="/legal/dmca" element={<Dmca />} />

@@ -4,11 +4,17 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { getPosterUrl } from '../lib/poster'
+import { sourceFromUrl } from '../lib/source'
+import { normalizeTags } from '../lib/categories'
+import { DEFAULT_CHANNEL } from '../lib/siteConfig'
+import { checkContent, describe } from '../lib/contentRules'
 import Seo from '../components/Seo'
 
 // Expected CSV headers (see /sample-data/movies-template.csv):
 // title, year, poster_url, trailer_url, description, keywords, tags, actors, channel, rating, runtime_minutes, featured
-const REQUIRED = ['title']
+// title and trailer_url (the video source) are required; see src/lib/contentRules.js
+// for the themes that are blocked or flagged for review.
+const REQUIRED = ['title', 'trailer_url']
 
 export default function AdminUpload() {
   const [rows, setRows] = useState([])
@@ -42,6 +48,18 @@ export default function AdminUpload() {
         localLog.push({ type: 'err', msg: `Row ${i + 2}: missing ${missing.join(', ')} — skipped` })
         continue
       }
+      const hits = checkContent(row)
+      if (hits.block.length) {
+        localLog.push({ type: 'err', msg: `Row ${i + 2} "${row.title.trim()}": blocked (${describe(hits.block)}) — skipped` })
+        continue
+      }
+      if (hits.review.length) {
+        localLog.push({ type: 'ok', msg: `Row ${i + 2} "${row.title.trim()}": imported, but needs a look (${describe(hits.review)})` })
+      }
+      const normalized = normalizeTags(row.tags)
+      if (normalized.changes.length) {
+        localLog.push({ type: 'ok', msg: `Row ${i + 2} "${row.title.trim()}": tags tidied (${normalized.changes.map((c) => `${c.from} → ${c.to}`).join(', ')})` })
+      }
       entries.push({
         title: row.title.trim(),
         slug: slugify(row.title),
@@ -50,9 +68,10 @@ export default function AdminUpload() {
         trailer_url: row.trailer_url?.trim() || null,
         description: row.description?.trim() || null,
         keywords: row.keywords?.trim() || null,
-        tags: row.tags?.trim() || null,
+        tags: normalized.tags || null,
         actors: row.actors?.trim() || null,
-        channel: row.channel?.trim() || null,
+        channel: row.channel?.trim() || DEFAULT_CHANNEL, // studio or app; the player's site goes in `source`
+        source: sourceFromUrl(row.trailer_url),
         rating: row.rating ? Number(row.rating) : null,
         runtime_minutes: row.runtime_minutes ? Number(row.runtime_minutes) : null,
         featured: ['true', '1', 'yes'].includes((row.featured || '').toLowerCase()),

@@ -19,7 +19,7 @@ export default function MovieGrid({ movies, ad = true, eager = true, featured = 
 
   const children = movies.map((m, i) => (
     <MovieCard
-      key={m.id}
+      key={m.slug}
       movie={m}
       priority={eager && i < EAGER_COUNT}
       first={eager && i === 0}

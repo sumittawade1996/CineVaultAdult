@@ -5,16 +5,44 @@ import { slugify } from '../lib/slugify'
 import { toEmbedUrl } from '../lib/video'
 import { getPosterUrl, IMAGE_CDN, optimizedPosterUrl, posterSrcSet } from '../lib/poster'
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
-import { isAdminAuthed } from '../lib/adminAuth'
+import { getAdminSession, isAdminUser } from '../lib/adminAuth'
 import { usePreload } from '../lib/preload'
+import { candidateSpecs, pickRelated } from '../lib/related'
 import { recordWatch } from '../lib/watchHistory'
 import Seo from '../components/Seo'
+import Breadcrumbs from '../components/Breadcrumbs'
+import { movieCrumbs, breadcrumbJsonLd } from '../lib/breadcrumbs'
+import { isHeldMovie } from '../lib/indexing'
 import AdSlot from '../components/AdSlot'
 import MovieGrid from '../components/MovieGrid'
 import PosterPlaceholder from '../components/PosterPlaceholder'
+import NotFound from './NotFound'
 import { FALLBACK_SITE_URL } from '../lib/siteConfig'
 
 const DETAIL_SIZES = '(max-width: 860px) 100vw, 640px'
+
+// Related videos (plan T13): same performer first, then shared topic tags,
+// then the same channel; see src/lib/related.js. scripts/prerender.mjs makes
+// the same pick from the rows it already has, so the page does not change
+// when this refresh arrives.
+async function loadRelated(movie) {
+  const results = await Promise.all(
+    candidateSpecs(movie).map((spec) => {
+      let query = supabase
+        .from('movies')
+        .select(`${MOVIE_CARD_FIELDS},actors`)
+        .neq('id', movie.id)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .limit(spec.limit)
+      if (spec.column) query = query.overlaps(spec.column, spec.values)
+      return query
+    })
+  )
+  const rows = new Map()
+  for (const { data } of results) for (const row of data || []) rows.set(row.id, row)
+  return pickRelated(movie, [...rows.values()]).map(({ actors, ...card }) => card) // eslint-disable-line no-unused-vars
+}
 
 export default function MovieDetail() {
   const { slug } = useParams()
@@ -27,7 +55,15 @@ export default function MovieDetail() {
   const [isAdmin, setIsAdmin] = useState(false)
   const silentRefresh = useRef(!!pre)
 
-  useEffect(() => { setIsAdmin(isAdminAuthed()) }, [])
+  // Only visitors who already have a stored session trigger the admin check;
+  // everyone else costs no request.
+  useEffect(() => {
+    let active = true
+    getAdminSession()
+      .then((session) => (session ? isAdminUser() : false))
+      .then((ok) => { if (active) setIsAdmin(!!ok) })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -47,17 +83,8 @@ export default function MovieDetail() {
         return
       }
       setMovie(data)
-      const firstTag = (data.tags || '').split(',')[0]?.trim()
-      if (firstTag) {
-        const { data: rel } = await supabase
-          .from('movies')
-          .select(MOVIE_CARD_FIELDS)
-          .ilike('tags', `%${firstTag}%`)
-          .neq('id', data.id)
-          .order('created_at', { ascending: false })
-          .limit(4)
-        if (!cancelled) setRelated(rel || [])
-      }
+      const rel = await loadRelated(data)
+      if (!cancelled) setRelated(rel)
     }
     load()
     return () => { cancelled = true }
@@ -86,27 +113,28 @@ export default function MovieDetail() {
     name: movie.title,
     description: movie.description || movie.seo_description || movie.title,
     thumbnailUrl: original || undefined,
-    uploadDate: movie.created_at || undefined,
+    // The date the source published the video; created_at is only the day we
+    // imported it, so it is the fallback.
+    uploadDate: movie.source_published_at || movie.created_at || undefined,
     duration: movie.runtime_minutes ? `PT${movie.runtime_minutes}M` : undefined,
     embedUrl: embedUrl || undefined,
-    aggregateRating:
-      movie.rating != null
-        ? { '@type': 'AggregateRating', ratingValue: movie.rating, bestRating: 10 }
-        : undefined,
+    // Adult content: stated explicitly. No aggregateRating on purpose: it
+    // needs a rating count (ratingCount/reviewCount) to be valid, and the
+    // site has one editor-set score per video, not visitor ratings.
+    isFamilyFriendly: false,
     actor: actors.length ? actors.map((name) => ({ '@type': 'Person', name })) : undefined,
     genre: tags.length ? tags : undefined,
+    // cast and tags as one list (schema.org `keywords`); the sitemap's <video:tag> carries the same
+    keywords: actors.length || tags.length ? [...actors, ...tags].join(', ') : undefined,
     url: `${FALLBACK_SITE_URL}/movie/${movie.slug}`,
   }) : null, [movie, original, embedUrl, actors, tags])
 
   if (notFound) {
     return (
-      <div className="container" style={{ padding: '48px 0' }}>
-        <div className="empty-state">
-          <h2>Movie not found</h2>
-          <p>That title isn’t in the library (it may have been removed).</p>
-          <Link to="/movies" className="btn btn-outline">Back to all movies</Link>
-        </div>
-      </div>
+      <NotFound
+        heading="Movie not found"
+        message="That title isn’t in the library. It may have been removed."
+      />
     )
   }
   if (!movie) {
@@ -127,6 +155,9 @@ export default function MovieDetail() {
 
   const useCdn = posterStage === 0 && original && IMAGE_CDN
   const poster = posterStage === 2 ? null : original
+  const crumbs = movieCrumbs(movie, tags)
+  // AI-made videos are labelled on the page (plan section 8).
+  const isAiGenerated = tags.some((t) => /^ai[- ]generated$/i.test(t)) || slugify(movie.channel || '') === 'ai-movie'
 
   return (
     <>
@@ -135,9 +166,11 @@ export default function MovieDetail() {
         description={movie.seo_description || movie.description}
         image={original}
         type="video.movie"
-        jsonLd={movieJsonLd}
+        noindex={isHeldMovie(movie)}
+        jsonLd={[movieJsonLd, breadcrumbJsonLd(crumbs)]}
       />
       <div className="container">
+        <Breadcrumbs items={crumbs} />
         <div className="detail-hero">
           <div>
             <div className="detail-poster">
@@ -169,6 +202,7 @@ export default function MovieDetail() {
               )}
             </div>
             <div className="detail-meta">
+              {isAiGenerated && <span className="chip" title="Created with AI, not live-action footage">AI-generated</span>}
               {movie.year && <span>{movie.year}</span>}
               {movie.runtime_minutes && <span>{movie.runtime_minutes} min</span>}
               {movie.rating != null && <span aria-label={`Rated ${movie.rating} out of 10`}>★ {movie.rating}</span>}
@@ -177,6 +211,7 @@ export default function MovieDetail() {
                   {movie.channel}
                 </Link>
               )}
+              {movie.source && <span title="The site that hosts the video player">Source: {movie.source}</span>}
             </div>
             {movie.description && <p className="detail-desc">{movie.description}</p>}
             {tags.length > 0 && (

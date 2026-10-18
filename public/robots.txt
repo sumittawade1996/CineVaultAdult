@@ -1,6 +1,11 @@
 User-agent: *
 Disallow: /admin/
 Disallow: /search
+# Search results and sort variants are not for the index (they are also noindex).
+Disallow: /*?q=
+Disallow: /*&q=
+Disallow: /*?sort=
+Disallow: /*&sort=
 Allow: /
 
 User-agent: MJ12bot

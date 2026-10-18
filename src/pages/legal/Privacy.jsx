@@ -10,7 +10,7 @@ export default function Privacy() {
   return (
     <LegalPage
       title="Privacy Policy"
-      description={`How ${SITE_NAME} handles information about visitors.`}
+      description={`How ${SITE_NAME} handles information about visitors: what is collected automatically, what is stored on your device, third-party content, and your choices.`}
       updated="September 2026"
     >
       <h2>1. Overview</h2>

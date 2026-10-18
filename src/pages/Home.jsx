@@ -5,7 +5,7 @@ import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { usePreload } from '../lib/preload'
 import MovieGrid from '../components/MovieGrid'
 import AdSlot from '../components/AdSlot'
-import Seo from '../components/Seo'
+import Seo, { DEFAULT_TITLE } from '../components/Seo'
 import CardSkeletonGrid from '../components/CardSkeletonGrid'
 import WatchShortcut from '../components/WatchShortcut'
 import { SITE_NAME, SOCIAL_LINKS, FALLBACK_SITE_URL } from '../lib/siteConfig'
@@ -59,12 +59,13 @@ export default function Home() {
   return (
     <>
       <Seo
-        title={undefined}
-        description="Big tits, top performers, and new scenes added daily on VEXN. Browse a growing HD library by category, performer, and channel."
+        rawTitle={DEFAULT_TITLE}
+        description="Adult movies provider with HD, MILF, Asian and Indian videos by category, performer and channel, plus desi, lesbian, massage and 4K. Newest first. 18+ only."
         jsonLd={homeJsonLd}
       />
       <div className="container home-heading">
-        <h1>Big Tits, Top Performers, New Scenes Daily</h1>
+        <h1>Adult, HD, MILF, Asian &amp; Indian Movies Provider</h1>
+        <p className="page-sub">Top performers and the latest additions.</p>
         <WatchShortcut variant="hero" />
       </div>
 
@@ -89,7 +90,10 @@ export default function Home() {
 
         <div className="section-head">
           <h2>Latest additions</h2>
-          <Link to="/movies">View all →</Link>
+          <span className="section-links">
+            <Link to="/new">What’s new</Link>
+            <Link to="/movies">View all →</Link>
+          </span>
         </div>
         {loading ? (
           <CardSkeletonGrid count={8} />

@@ -20,3 +20,10 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Generated at build time by scripts/generate-sitemap.mjs (npm run sitemap); not committed
+public/sitemap*.xml
+
+# Local tool state and reports
+.claude/
+tag-report.csv

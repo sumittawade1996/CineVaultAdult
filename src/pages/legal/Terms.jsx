@@ -8,7 +8,7 @@ export default function Terms() {
   return (
     <LegalPage
       title="Terms of Service"
-      description={`The terms that govern your use of ${SITE_NAME}.`}
+      description={`The terms that govern your use of ${SITE_NAME}: the 18+ age requirement, third-party content, acceptable use, copyright complaints and liability.`}
       updated="September 2026"
     >
       <h2>1. Acceptance of terms</h2>

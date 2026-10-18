@@ -3,8 +3,11 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
+import Breadcrumbs from '../components/Breadcrumbs'
+import { breadcrumbJsonLd } from '../lib/breadcrumbs'
 import AdSlot from '../components/AdSlot'
-import { FALLBACK_SITE_URL } from '../lib/siteConfig'
+import { FALLBACK_SITE_URL, SITE_NAME } from '../lib/siteConfig'
+import { formatArticleDate, isUpdated } from '../lib/articleDates'
 
 export default function ArticleDetail() {
   const { slug } = useParams()
@@ -57,10 +60,20 @@ export default function ArticleDetail() {
     headline: article.title,
     description: article.seo_description || article.excerpt || undefined,
     image: article.cover_image_url || undefined,
-    author: article.author ? { '@type': 'Person', name: article.author } : undefined,
+    // The byline is the editorial team, not a person.
+    author: { '@type': 'Organization', name: SITE_NAME },
+    publisher: { '@type': 'Organization', name: SITE_NAME, url: FALLBACK_SITE_URL },
     datePublished: article.created_at || undefined,
+    dateModified: isUpdated(article) ? article.updated_at : article.created_at || undefined,
     mainEntityOfPage: `${FALLBACK_SITE_URL}/article/${article.slug}`,
   }
+
+  // Home › Articles › this article
+  const crumbs = [
+    { name: 'Home', to: '/' },
+    { name: 'Articles', to: '/articles' },
+    { name: article.title, to: `/article/${article.slug}` },
+  ]
 
   return (
     <>
@@ -69,11 +82,16 @@ export default function ArticleDetail() {
         description={article.seo_description || article.excerpt}
         image={article.cover_image_url}
         type="article"
-        jsonLd={articleJsonLd}
+        jsonLd={[articleJsonLd, breadcrumbJsonLd(crumbs)]}
       />
       <div className="container" style={{ maxWidth: 760, padding: '48px 24px' }}>
-        <div className="hero-eyebrow">{article.author}</div>
+        <Breadcrumbs items={crumbs} />
         <h1 className="detail-title">{article.title}</h1>
+        <p className="article-meta">
+          <span>By {article.author || `${SITE_NAME} Editorial`}</span>
+          <span>Published <time dateTime={article.created_at}>{formatArticleDate(article.created_at)}</time></span>
+          {isUpdated(article) && <span>Updated <time dateTime={article.updated_at}>{formatArticleDate(article.updated_at)}</time></span>}
+        </p>
         {article.cover_image_url && (
           <img
             src={article.cover_image_url}

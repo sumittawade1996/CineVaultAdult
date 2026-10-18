@@ -47,7 +47,7 @@ export default function Movies() {
       const to = from + PAGE_SIZE - 1
       const sort = SORTS[sortKey]
 
-      let query = supabase
+      const base = () => supabase
         .from('movies')
         .select(MOVIE_CARD_FIELDS, { count: 'exact' })
         .order(sort.column, { ascending: sort.ascending, nullsFirst: false })
@@ -57,9 +57,14 @@ export default function Movies() {
       // search_vector is a generated tsvector (title/keywords/tags/actors/
       // channel) with a GIN index, so this hits an index instead of the
       // five-column ILIKE-OR scan this used to run.
-      if (q) query = query.textSearch('search_vector', q, { type: 'websearch', config: 'english' })
-
-      const { data, count, error: err } = await query
+      let { data, count, error: err } = await (q ? base().textSearch('search_vector', q, { type: 'websearch', config: 'english' }) : base())
+      // Nothing found: people often type a name without its space ("miamalkova"),
+      // which whole-word search cannot match. Try a substring match on the title and
+      // cast with everything but letters and digits removed (migration 016).
+      const compact = q.toLowerCase().replace(/[^a-z0-9]/g, '')
+      if (!err && q && (count || 0) === 0 && compact.length >= 4) {
+        ;({ data, count, error: err } = await base().ilike('search_compact', `%${compact}%`))
+      }
       if (cancelled) return
       if (err) {
         setError(true)
@@ -95,8 +100,8 @@ export default function Movies() {
   return (
     <>
       <Seo
-        title={q ? `Search: ${q}` : 'Movies'}
-        description="Browse the full VEXN movie library — trailers, ratings, genres and descriptions, updated daily."
+        title={q ? `Search: ${q}` : 'Newest Porn Videos and Full Movies'}
+        description="Browse every video in the VEXN library, newest first, with length, source and tags for each. Pick a category or performer to narrow the list. 18+ only."
         noindex={!!q || page > 1}
       />
       <div className="container">

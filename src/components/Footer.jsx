@@ -1,18 +1,42 @@
 import { Link } from 'react-router-dom'
 import { SITE_NAME, SOCIAL_LINKS } from '../lib/siteConfig'
+import usePartners from '../lib/usePartners'
+
+// More than this and the list lives on /partners only.
+const FOOTER_PARTNER_LIMIT = 8
 
 export default function Footer() {
+  const partners = usePartners()
   return (
     <footer className="footer">
       <div className="container footer-inner">
         <Link to="/" className="footer-brand" aria-label={`${SITE_NAME} home`}>VEX<span>N</span></Link>
         <nav className="footer-links" aria-label="Footer">
           <Link to="/movies">Movies</Link>
+          <Link to="/new">New</Link>
           <Link to="/actors">Actors</Link>
           <Link to="/channels">Channels</Link>
           <Link to="/categories">Categories</Link>
           <Link to="/articles">Articles</Link>
         </nav>
+        {partners.length > 0 && (
+          <section className="footer-partners" aria-labelledby="footer-partners-title">
+            <div className="footer-partners-head">
+              <h2 id="footer-partners-title">Partners</h2>
+              <Link to="/partners">All partners →</Link>
+            </div>
+            <ul>
+              {partners.slice(0, FOOTER_PARTNER_LIMIT).map((p) => (
+                <li key={p.key}>
+                  <a href={p.href} rel={p.rel} target={p.target} title={p.title}>
+                    {p.text}
+                    <span className="footer-partner-host">{p.host}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <div className="footer-social">
           <a href={SOCIAL_LINKS.twitter} target="_blank" rel="noopener noreferrer" aria-label="Follow us on X (Twitter)" className="social-link">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

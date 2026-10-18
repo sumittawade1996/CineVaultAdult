@@ -7,6 +7,11 @@
 // Reads VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY from the environment
 // or from .env in the project root. Rows that already have a poster are
 // never touched; providers without a thumbnail source are skipped.
+//
+// Writing (--apply) needs the service role key, because the public anon key
+// can no longer write to movies. Put SUPABASE_SERVICE_ROLE_KEY in your local
+// .env (never in a VITE_ variable, never committed, never in Netlify's
+// browser-exposed settings).
 
 import { readFileSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
@@ -29,7 +34,13 @@ if (!url || !key) {
   process.exit(1)
 }
 const apply = process.argv.includes('--apply')
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (apply && !serviceKey) {
+  console.error('--apply needs SUPABASE_SERVICE_ROLE_KEY (the anon key cannot write to movies).')
+  process.exit(1)
+}
 const supabase = createClient(url, key)
+const writer = apply ? createClient(url, serviceKey) : null
 
 async function epornerThumb(id) {
   const res = await fetch(`https://www.eporner.com/api/v2/video/id/?id=${id}&thumbsize=big`, {
@@ -81,7 +92,7 @@ if (!apply) {
 
 let ok = 0
 for (const u of updates) {
-  const { error: upErr } = await supabase.from('movies').update({ poster_url: u.poster }).eq('id', u.id)
+  const { error: upErr } = await writer.from('movies').update({ poster_url: u.poster }).eq('id', u.id)
   if (upErr) console.error(`  FAILED ${u.slug}: ${upErr.message}`)
   else ok++
 }

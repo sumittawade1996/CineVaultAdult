@@ -19,13 +19,17 @@ import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { slugify } from '../src/lib/slugify.js'
 import { buildTaxonomy, buildSingleTaxonomy } from '../src/lib/taxonomy.js'
-import { MOVIE_CARD_FIELDS } from '../src/lib/movieFields.js'
+import { TAXONOMY_FIELDS } from '../src/lib/movieFields.js'
+import { summarizeWeeks, weekKey } from '../src/lib/weeks.js'
+import { pickRelated, selectCandidates } from '../src/lib/related.js'
+import { PARTNER_COLUMNS } from '../src/lib/partnerLinks.js'
 
 const DIST = 'dist'
 const SSR_DIR = 'dist-ssr'
-const TAXONOMY_FIELDS = `${MOVIE_CARD_FIELDS},actors`
 const MOVIES_PAGE_SIZE = 20
 const ARTICLES_PAGE_SIZE = 20
+const NEW_LATEST_COUNT = 24 // keep in step with src/pages/NewVideos.jsx
+const NEW_WEEKS_SHOWN = 12
 
 // Netlify injects env vars; local builds read .env like Vite does.
 function loadDotEnv() {
@@ -76,16 +80,35 @@ async function main() {
 
   // The same queries the pages run in the browser, so the preloaded state
   // is what the client's own refresh would produce.
-  const [cards, fullMovies, articles] = await Promise.all([
+  const [cards, fullMovies, articles, performerBios, channelBios, categoryCopy, partnerRows] = await Promise.all([
     supabase.from('movies').select(TAXONOMY_FIELDS).order('created_at', { ascending: false }),
     supabase.from('movies').select('*'),
     supabase.from('articles').select('*').eq('published', true).order('created_at', { ascending: false }),
+    supabase.from('performer_descriptions').select('slug,description'),
+    supabase.from('channel_descriptions').select('slug,description'),
+    supabase.from('category_descriptions').select('slug,title,intro,seo_title,seo_description,faq,is_indexable'),
+    supabase.from('footer_partners').select(PARTNER_COLUMNS).order('sort_order').order('name'),
   ])
   for (const r of [cards, fullMovies, articles]) if (r.error) throw new Error(`Supabase: ${r.error.message}`)
+  // Hand-written copy is optional: a missing table (older database) just
+  // means those pages fall back to the sentence built from the data.
+  const bySlug = (r, pick) => new Map((r.error ? [] : r.data || []).map((row) => [row.slug, pick(row)]))
+  const bios = {
+    actors: bySlug(performerBios, (row) => row.description),
+    channel: bySlug(channelBios, (row) => row.description),
+  }
+  const categoryRows = bySlug(categoryCopy, (row) => row)
+  // The footer's partner list is part of every page (a failed read just means none).
+  const partners = partnerRows.error ? [] : partnerRows.data || []
   const cardRows = cards.data || []
   const movieRows = fullMovies.data || []
   const articleRows = articles.data || []
   const stripActors = ({ actors, ...card }) => card
+  // Taxonomy pages carry every match in their preloaded data (the "at a glance" numbers and the
+  // pagination need them). Drawing a card needs neither the uuid (the grid keys on the slug) nor the
+  // creation time (the list is already in order), and the uuid does not compress, so both are left
+  // out; the trailer URL is only a fallback for a missing poster.
+  const slimMatch = ({ id, created_at, ...m }) => (m.poster_url ? (({ trailer_url, ...rest }) => rest)(m) : m)
 
   const routes = []
   routes.push(['/', {
@@ -94,10 +117,19 @@ async function main() {
     articles: articleRows.slice(0, 3).map(({ id, slug, title, excerpt, cover_image_url }) => ({ id, slug, title, excerpt, cover_image_url })),
   }])
   routes.push(['/movies', { movies: cardRows.slice(0, MOVIES_PAGE_SIZE).map(stripActors), total: cardRows.length }])
+  // "New" pages: the latest additions and one archive per ISO week.
+  const weeks = summarizeWeeks(cardRows.map((m) => m.created_at))
+  const weeksShown = weeks.slice(0, NEW_WEEKS_SHOWN)
+  routes.push(['/new', { movies: cardRows.slice(0, NEW_LATEST_COUNT).map(stripActors), total: Math.min(NEW_LATEST_COUNT, cardRows.length), weeks: weeksShown }])
+  for (const w of weeks) {
+    const inWeek = cardRows.filter((m) => weekKey(m.created_at) === w.key)
+    routes.push([`/new/${w.key}`, { movies: inWeek.slice(0, MOVIES_PAGE_SIZE).map(stripActors), total: inWeek.length, weeks: weeksShown }])
+  }
   routes.push(['/articles', { articles: articleRows.slice(0, ARTICLES_PAGE_SIZE), total: articleRows.length }])
   // Static compliance pages carry no Supabase data — the route alone is
   // enough for entry-server to render their fixed content.
-  for (const path of ['/legal/terms', '/legal/privacy', '/legal/dmca', '/legal/2257']) routes.push([path, {}])
+  // /partners reads the partner list that every page already carries.
+  for (const path of ['/partners', '/legal/terms', '/legal/privacy', '/legal/dmca', '/legal/2257']) routes.push([path, {}])
 
   const taxonomies = [
     { field: 'actors', listPath: '/actors', basePath: '/actor', items: buildTaxonomy(cardRows, 'actors') },
@@ -110,19 +142,17 @@ async function main() {
       const allMatches = cardRows.filter((m) => matchesSlug(m, field, item.slug))
       if (allMatches.length === 0) continue
       const name = displayName(allMatches[0], field, item.slug) || item.slug
-      routes.push([`${basePath}/${item.slug}`, { allMatches, name }])
+      const extra = field === 'tags'
+        ? { catDesc: categoryRows.get(item.slug) ?? null }
+        : { bio: bios[field]?.get(item.slug) ?? null }
+      routes.push([`${basePath}/${item.slug}`, { allMatches: allMatches.map(slimMatch), name, ...extra }])
     }
   }
 
   for (const movie of movieRows) {
     if (!movie.slug) continue
-    const firstTag = (movie.tags || '').split(',')[0]?.trim()
-    const related = firstTag
-      ? cardRows
-          .filter((m) => m.id !== movie.id && (m.tags || '').toLowerCase().includes(firstTag.toLowerCase()))
-          .slice(0, 4)
-          .map(stripActors)
-      : []
+    // Same pick the browser makes (src/pages/MovieDetail.jsx loadRelated).
+    const related = pickRelated(movie, selectCandidates(movie, cardRows)).map(stripActors)
     routes.push([`/movie/${movie.slug}`, { movie, related }])
   }
   for (const article of articleRows) {
@@ -134,17 +164,18 @@ async function main() {
   const rewrites = []
   for (const [route, data] of routes) {
     try {
-      const { html, helmet } = await render(route, { path: route, data })
+      const { html, helmet } = await render(route, { path: route, data, partners })
       const head = helmet
         ? [helmet.title, helmet.meta, helmet.link, helmet.script].map((h) => h.toString()).filter(Boolean).join('\n    ')
         : ''
       const page = shell
-        .replace(/<title>[\s\S]*?<\/title>\s*/, '')
+        .replace(/<title[^>]*>[\s\S]*?<\/title>\s*/, '')
         .replace(/<meta name="description"[^>]*>\s*/, '')
+        .replace(/<meta name="rating"[^>]*>\s*/, '')
         .replace('</head>', `${head}\n  </head>`)
         .replace(
           /<div id="root">\s*<\/div>/,
-          `<div id="root">${html}</div>\n    <script>window.__VEXN_PRELOAD__=${serialize({ path: route, data })}</script>`
+          `<div id="root">${html}</div>\n    <script>window.__VEXN_PRELOAD__=${serialize({ path: route, data, partners })}</script>`
         )
       if (!page.includes('__VEXN_PRELOAD__')) throw new Error('root element not found in shell')
       const file = outputPath(route)

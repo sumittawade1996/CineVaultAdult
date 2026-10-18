@@ -5,6 +5,7 @@ import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 import Pagination from '../components/Pagination'
+import { formatArticleDate } from '../lib/articleDates'
 
 const PAGE_SIZE = 20
 
@@ -50,9 +51,14 @@ export default function Articles() {
 
   return (
     <>
-      <Seo title="Articles" description="Reviews, news, and deep dives on the movies you care about." />
+      <Seo title="Adult Video Guides – Genres, Performers, Formats" description="Guides and explainers on genres, performers and formats in the VEXN library, from Desi web series to 4K and massage videos." />
       <div className="container">
-        <div className="section-head"><h2>Articles</h2></div>
+        <div className="page-head">
+          <div>
+            <h1>Articles</h1>
+            {!loading && total > 0 && <p className="page-sub">{total.toLocaleString()} {total === 1 ? 'article' : 'articles'}</p>}
+          </div>
+        </div>
         <AdSlot slot="articlesInFeed" />
         {loading ? (
           <div className="article-grid" aria-hidden="true">
@@ -77,6 +83,7 @@ export default function Articles() {
                   <div className="pad">
                     <h3>{a.title}</h3>
                     <p>{a.excerpt}</p>
+                    <p className="article-date"><time dateTime={a.created_at}>{formatArticleDate(a.created_at)}</time></p>
                   </div>
                 </Link>
               ))}

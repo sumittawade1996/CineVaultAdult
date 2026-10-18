@@ -1,27 +1,35 @@
-// Very simple client-side admin gate — good enough to keep casual
-// visitors off /admin/*, NOT a real security boundary (the password
-// lives in this bundle, so anyone who opens dev tools can read it).
-// The actual data protection is Supabase's row-level security
-// policies on the movies/articles tables. If you ever need this to
-// be a real login, swap this for Supabase Auth instead — happy to
-// wire that in.
+// Admin sign-in backed by Supabase Auth.
+//
+// The browser never holds a shared password any more. An admin signs in
+// with an email + password that lives in Supabase Auth, and Supabase sends
+// the resulting JWT with every request. The real protection is the row-level
+// security policies in supabase/migrations/003_admin_lockdown.sql: only a
+// user listed in public.admin_users can insert, update or delete movies and
+// articles. This file only decides what the UI shows.
 
-const ADMIN_USERNAME = 'sumit'
-const ADMIN_PASSWORD = 'sumit123'
-const SESSION_KEY = 'cinevault-admin-authed'
+import { supabase } from './supabase'
 
-export function checkAdminCredentials(username, password) {
-  return username === ADMIN_USERNAME && password === ADMIN_PASSWORD
+export async function signInAdmin(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  return { session: data?.session ?? null, error }
 }
 
-export function isAdminAuthed() {
-  return sessionStorage.getItem(SESSION_KEY) === '1'
+export async function getAdminSession() {
+  const { data } = await supabase.auth.getSession()
+  return data?.session ?? null
 }
 
-export function setAdminAuthed() {
-  sessionStorage.setItem(SESSION_KEY, '1')
+// True when the signed-in user is listed in public.admin_users.
+export async function isAdminUser() {
+  const { data, error } = await supabase.rpc('is_vexn_admin')
+  return !error && data === true
 }
 
-export function clearAdminAuthed() {
-  sessionStorage.removeItem(SESSION_KEY)
+export function onAdminSessionChange(callback) {
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session))
+  return () => data.subscription.unsubscribe()
+}
+
+export async function signOutAdmin() {
+  await supabase.auth.signOut()
 }
