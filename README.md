@@ -126,14 +126,22 @@ article pages.
 
 ## 9. Locking down the admin pages before you go live
 
-Right now `/admin/upload` and `/admin/article` are open to anyone who finds
-the URL, because the Supabase policies allow public inserts (needed for the
-CSV upload to work out of the box). Before launch, either:
-- Don't link to `/admin/*` from your public nav (they're already
-  unlisted — only reachable by direct URL), **and/or**
-- Add Supabase Auth (email/password or magic link) and change the `insert`/
-  `update` policies in `schema.sql` to `using (auth.role() = 'authenticated')`
-  instead of `using (true)`. Ask me and I can wire this in.
+Writes to `movies` and `articles` are limited to signed-in admins. Setup, once:
+
+1. In Supabase: Authentication > Users > Add user (your email + a strong
+   password). Then Authentication > Sign In / Providers > Email: turn
+   **off** "Allow new users to sign up".
+2. Run `supabase/migrations/003_admin_policies.sql` (adds `admin_users`, the
+   `is_vexn_admin()` function and the admin policies), then register yourself:
+   `insert into public.admin_users (user_id, note) select id, 'owner' from auth.users where email = 'you@example.com';`
+3. Deploy the site, then run `supabase/migrations/004_close_public_writes.sql`
+   (removes the old public insert/update policies and the anon write rights).
+   Run it only after the new login is live, because the old admin pages wrote
+   with the public anon key.
+
+Scripts that write to the database (for example `scripts/backfill-posters.mjs
+--apply`) need `SUPABASE_SERVICE_ROLE_KEY` in your local `.env`. Never put that
+key in a `VITE_` variable and never commit it.
 
 ## 10. Ad slots (expanded, responsive)
 
@@ -257,18 +265,13 @@ Happy to implement any of these next — just say which one.
 
 ## 14. Admin login + single-movie upload
 
-- **Admin login gate**: `/admin/upload`, `/admin/article`, and
-  `/admin/movie` now sit behind a simple login screen. Username
-  `sumit`, password `sumit123` — set in `src/lib/adminAuth.js` if you
-  ever want to change them. Logging in shows a small admin nav bar
-  with links between the three admin tools and a Log out button.
-  **Heads up**: this is a client-side gate, good enough to keep casual
-  visitors out, but the password does live inside the JS bundle — a
-  technical visitor who inspects it could read it. It is *not* the
-  same as a real login system. The actual data-write protection is
-  still your Supabase row-level security policies. If you'd rather
-  have real auth (so the password isn't sitting in plain sight in the
-  bundle), say the word and I'll wire in Supabase Auth instead.
+- **Admin login**: `/admin/upload`, `/admin/article`, and `/admin/movie`
+  sit behind a Supabase Auth sign-in (email + password; see section 9 for
+  setup). Only users listed in `public.admin_users` can write, and that is
+  enforced by the database's row-level security policies, not by the
+  browser. Signing in shows a small admin nav bar with links between the
+  three admin tools and a Log out button. There is no shared password in the
+  JS bundle any more.
 - **Single movie upload** (`/admin/movie`, linked from the bulk upload
   page): the same fields as the CSV importer — title, year, poster
   URL, trailer URL, description, tags, actors, channel, rating,
@@ -276,6 +279,284 @@ Happy to implement any of these next — just say which one.
   adding or fixing one movie at a time. Submitting a title that
   already exists updates that movie instead of creating a duplicate
   (same upsert-on-slug behavior as the CSV tool).
+
+## 15. Removed and unknown movies (404 / 410 / 301)
+
+A movie URL that no longer exists must not answer HTTP 200 (a "soft 404").
+`netlify/edge-functions/movie-gate.js` runs on every `/movie/*` request:
+
+- slug listed in `public.removed_movies` with `redirect_to` -> **301** to that
+  performer, channel or category page
+- slug listed in `public.removed_movies` -> **410 Gone**
+- slug in neither `movies` nor `removed_movies` -> **404**
+- everything else is served exactly as before (prerendered pages cost no
+  extra database call; the removed list is cached for 5 minutes, and if
+  Supabase is unreachable the page is served normally).
+
+The 404/410 body is the normal app shell, so visitors see the "not found"
+page with search and popular categories (`src/pages/NotFound.jsx`), and the
+response carries `X-Robots-Tag: noindex`. The same function still serves live
+Open Graph tags to link-preview bots (X, Telegram, Slack, ...).
+
+Maintenance:
+- Deleting a movie in `/admin/movie` records it in `removed_movies`
+  automatically; renaming one records a 301 from the old slug to the new one.
+- If you delete rows with SQL, also run
+  `insert into removed_movies (slug, reason) values ('the-slug', 'why');`
+  (add `redirect_to` as `/actor/...` or `/channel/...` when a close page exists).
+- Adding a movie back with the same slug clears its `removed_movies` row
+  (database trigger), so it cannot be answered with 410 by mistake.
+- Offline test of the function: `node scripts/test-movie-gate.mjs`.
+- After a deploy, check with `curl -I https://vexn.org/movie/<removed-slug>`
+  (expect 301 or 410) and `curl -I https://vexn.org/movie/does-not-exist`
+  (expect 404). Migrations: `005_removed_movies.sql`, `006_seed_removed_movies.sql`.
+
+## 16. Canonicals, noindex and the adult label
+
+`src/components/Seo.jsx` (with `src/lib/seoUrl.js`) sets the head tags for every page:
+
+- **Canonical** is the clean URL on https://vexn.org. Tracking parameters
+  (`utm_*`, `fbclid`, `gclid`, X's `s`/`t`, ...) are dropped and the page stays
+  indexable. `?page=1` is the same as no parameter; `?page=n` is canonical to
+  itself.
+- **Variants are `noindex, follow`**: any other parameter (`?sort=`, `?q=`,
+  filters), plus page 2+ of listings and anything passed `noindex`. `robots.txt`
+  also disallows `?q=` and `?sort=`.
+- **Adult label**: one `<meta name="rating" content="RTA-5042-1996-1400-1577-RTA">`
+  on every page and the same value as an HTTP `Rating` header (`netlify.toml`).
+- The static shell in `index.html` marks its `title`, `description` and `rating`
+  tags with `data-rh="true"` so react-helmet replaces them instead of duplicating
+  them; `scripts/prerender.mjs` strips them before injecting each page's head.
+
+Tests: `node scripts/test-seo-url.mjs`.
+
+## 17. Sitemaps and what gets indexed
+
+`scripts/generate-sitemap.mjs` runs before every build and writes a sitemap
+index (`public/sitemap.xml`) plus `sitemap-pages`, `-movies`, `-video`,
+`-articles` and `-taxonomy`:
+
+- `lastmod` is the row's real `updated_at` (a page's lastmod is the newest row
+  it lists). Pages with no meaningful date, such as the legal pages, have none.
+- `sitemap-video.xml` has one `<video:video>` per movie that has a poster:
+  title, description, thumbnail, embed player URL, duration, publication date
+  (`source_published_at`, else `created_at`), tags and
+  `<video:family_friendly>no</video:family_friendly>`.
+- Taxonomy pages follow `src/lib/indexing.js`: categories need 10 titles,
+  performers 5, channels 3; attribute tags (`hd`, `4k`, `pornstar`,
+  `web-series`, studio labels) and the `eporner` channel are never indexed.
+  The same function sets `noindex` on the page, so page and sitemap agree.
+- `public/robots.txt` is edited by hand and is the source of truth; the script
+  only refreshes its `Sitemap:` line.
+- `source_published_at` (migration `007_source_published_at.sql`) is the date
+  the source site published a video. It feeds `uploadDate` in the movie
+  markup and the video sitemap.
+- Run it into a scratch folder without touching tracked files:
+  `SITEMAP_OUT_DIR=/tmp/sm node scripts/generate-sitemap.mjs`.
+- Tests: `node scripts/test-indexing.mjs`.
+
+## 18. Breadcrumbs and movie-page markup
+
+- Movie, category/performer/channel and article pages show a visible
+  breadcrumb (`src/components/Breadcrumbs.jsx`) and emit the matching
+  `BreadcrumbList` JSON-LD (`src/lib/breadcrumbs.js`). A movie's middle step is
+  its first topic tag; attribute tags such as `hd` or `4k` are skipped.
+- The movie `VideoObject` states `isFamilyFriendly: false` and no longer
+  includes `aggregateRating` (Google requires a rating count and the site only
+  has one editor-set score per video). `uploadDate` is the source publication
+  date (`source_published_at`), falling back to the import date.
+- The "not found" page (`src/pages/NotFound.jsx`) shows a search box, popular
+  categories and the six newest featured videos so visitors who hit a dead link
+  have somewhere to go.
+- Tests: `node scripts/test-breadcrumbs.mjs`.
+
+## 19. Page-view recording
+
+Page views are sent to a Netlify Edge Function, not to Supabase directly.
+
+- `src/lib/analytics.js` posts one small beacon per page to `/api/pv`
+  (`netlify/edge-functions/page-view.js`). It adds the country (from the CDN),
+  a bot check and a per-IP limit, trims every field, and inserts into
+  `public.page_views`. No cookies; the session id is random per tab and lives in
+  `sessionStorage`. The browser skips known bots itself.
+- Columns added by `008_page_views_and_function_hardening.sql`: `session_id`,
+  `visitor_type`, `country`, `device`, `utm_source/medium/campaign`,
+  `status_code` (404 when the not-found page was shown).
+- Optional: set `SUPABASE_SERVICE_ROLE_KEY` in Netlify's environment. The
+  function then writes with it, and the public insert policy on `page_views`
+  can be dropped (see the comment at the end of migration 008).
+- Tests: `node scripts/test-page-view.mjs`.
+
+## 20. Content rules for imports and the review report
+
+VEXN does not publish step-family, incest or in-law themes, teen/school
+themes, non-consensual or "leaked"/hidden-camera material, forced themes,
+virgin themes, or hypnosis/unconscious themes.
+
+- `src/lib/contentRules.js` holds the rules (`block` and `review` levels) and
+  checks the title, slug, tags, keywords and description.
+- The admin importers use it: `AdminUpload` skips blocked rows and flags review
+  rows, `AdminMovie` refuses to save a blocked row.
+- `npm run review-content -- out.csv` (`scripts/review-content.mjs`) lists the
+  rows already in the catalogue that match. It only reads; nothing is changed or
+  deleted by it.
+- Tests: `node scripts/test-content-rules.mjs`.
+
+## 21. Category pages with written copy
+
+- `public.category_descriptions` (migrations `009` and `010`) holds, per
+  category slug: an optional H1, an intro, the SEO title (30–53 characters) and
+  description (140–160), an optional FAQ and an `is_indexable` switch. A page
+  shows the intro followed by one sentence built from live data.
+- The copy for about 24 categories is in
+  `scripts/data/category-descriptions.mjs`. `npm run seed-categories` checks
+  lengths and content rules and writes `010_seed_category_descriptions.sql`.
+  Edit a row directly in Supabase to change a page without a deploy; the
+  prerendered HTML picks it up on the next build.
+- A category with `is_indexable = false` (web-series, until the rights are
+  confirmed) is `noindex` and left out of the sitemap.
+- Categories without a row fall back to a sentence built from the data.
+
+## 22. "New" pages
+
+- `/new` lists the 24 latest additions and links to a weekly archive;
+  `/new/2026-w41` lists everything added in that ISO week (20 per page).
+  Weeks come from `created_at` (`src/lib/weeks.js`), so nothing is maintained
+  by hand. Weeks with fewer than 5 additions are `noindex` and not in the
+  sitemap.
+- Related videos on a movie page (`src/lib/related.js`): same performer first,
+  then shared topic tags, then the same channel, then the newest. The build and
+  the browser use the same code, so the list does not change after load.
+- Tests: `node scripts/test-weeks.mjs`, `node scripts/test-related.mjs`.
+
+## 23. Partners: footer list and /partners page
+
+- `public.footer_partners` (migrations `011_footer_partners.sql`,
+  `012_footer_partners_details.sql`): visitors can only read active rows inside
+  their date window. Add a partner with
+  `insert into public.footer_partners (name, url, label, description, details, sort_order) values (...)`,
+  pause one with `update ... set is_active = false`. No deploy needed; the
+  browser caches the list for 10 minutes and the next build embeds it in the
+  HTML.
+- Footer: a "Partners" list (link text = `label`, falling back to `name`, with the
+  site address under it; the first 8 rows) and an "All partners" link.
+- `/partners` (`src/pages/Partners.jsx`): one card per partner with name,
+  address, `description` (one line), `details` (longer text, a blank line starts a
+  new paragraph) and a "Visit" button, plus a note that the links are sponsored
+  and lead to third-party adult sites. The page is `noindex` and not in the
+  sitemap; remove `noindex` in `Partners.jsx` and add it to `STATIC_ROUTES` in
+  `scripts/generate-sitemap.mjs` if you want it searchable.
+- Links carry `rel="sponsored noopener"` (`src/lib/partnerLinks.js` always marks
+  a paid link). Put the partner's referral parameter in `url`.
+- Tests: `node scripts/test-partners.mjs`.
+
+## 24. Source check and page audit
+
+- `npm run check-embeds` (`scripts/check-dead-embeds.mjs`) asks Eporner and
+  Pornhub whether each embedded video still exists, about one request per
+  second, and confirms a removal twice. Report only. The workflow
+  `.github/workflows/check-dead-embeds.yml` runs it every Monday and fails when
+  a video is confirmed removed; it needs `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY` as repository secrets.
+- `node scripts/audit-pages.mjs` (after a build) checks every prerendered page
+  for title, description, canonical, one H1, the adult rating tag, and, on movie
+  pages, the schema markup, poster alt text, player and related links.
+- `npm test` runs every offline test.
+
+## 25. Channel, source and controlled categories
+
+- `movies.source` (migration `013_movie_source.sql`) is the site that hosts the
+  player (Eporner, PornHub, ...), filled from `trailer_url` by
+  `src/lib/source.js`. `movies.channel` is now only a studio or collection
+  (Nuru Massage, Brazzers, AI Movie, JAV Movies, ...) and may be empty. The movie
+  page shows "Source: Eporner". `/channel/eporner`, `/channel/pornhub` and
+  `/channel/youtube` 301 to `/channels`.
+- `src/lib/categories.js` is the controlled list: about 55 topic categories (each with a hand-written hub in `scripts/data/category-descriptions.mjs`), the
+  label tags (HD, 4K, studio names) and the aliases (Housewife -> Housewives,
+  Romance -> Romantic, ...). The importer and the admin form rewrite aliases.
+  `npm run tag-report` shows how the live catalogue sits against it.
+- Tests: `node scripts/test-source.mjs`, `node scripts/test-categories.mjs`.
+
+## 26. Performer and channel pages
+
+- On screens 960 px wide and up, the space beside the intro holds a "Watch next"
+  column (one or two poster cards from the page's own videos; `pickRail` in
+  `src/lib/taxonomyFacts.js`). To put an ad there, fill in `taxonomyRail.html`
+  in `src/lib/adSlots.js` (300x250); while it is empty no box is shown.
+
+- Performer and channel pages show an "at a glance" block (runtime range, how
+  many videos run 30 minutes or more, channels or sources, frequent co-stars, the
+  three longest videos). It is counted from the page's own video list
+  (`src/lib/taxonomyFacts.js`), so the built HTML and the browser agree.
+- The intros are rows in `performer_descriptions` and `channel_descriptions`.
+  Write them from catalogue facts only and avoid exact counts that go stale.
+
+## 27. Articles
+
+- Articles show the byline, the published date and, when it changed on a later
+  day, the updated date (`src/lib/articleDates.js`); the JSON-LD has the dates and
+  an Organization author. `npm run check-links` lists, for every published
+  article, the word count, dead internal links and numbers that need a source.
+- Rule for statistics: use our own data (the catalogue and `page_views`) and say
+  how many weeks it covers; do not quote other sites' figures.
+- Merged articles are unpublished and 301 in `netlify.toml`.
+
+## 28. Promotion tools
+
+- `scripts/promo/utm.mjs` builds tagged links; `posts.mjs` is the post calendar;
+  `npm run promo-calendar -- out.csv` writes it as a CSV with the final text,
+  link and X length. Nothing is scheduled or posted by these scripts.
+- `npm run promo-weekly` prints the Telegram "new this week" message; `--send`
+  posts it (needs `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`).
+- `npm run indexnow` lists the URLs it would submit to IndexNow; `--send`
+  submits them. The key file is `public/<key>.txt`. Run it after a deploy.
+- `public/manifest.webmanifest` and the two icons make the site installable.
+- Tests: `node scripts/test-promo.mjs`, `node scripts/test-taxonomy-facts.mjs`,
+  `node scripts/test-article-dates.mjs`.
+
+## 29. Movie copy rewrite
+
+- `node scripts/rewrite-movie-copy.mjs` is a dry run: it prints the counts and
+  samples and writes a before/after CSV to Downloads. `--apply` saves the old
+  text to Downloads, then updates the rows. Rows that the content rules block are
+  skipped. A field that is already clean (no picture-quality or pitch wording, right
+  length) is not touched, so the script can be run again after new imports.
+- The wording comes from `scripts/lib/movieCopy.mjs`: the clean opening sentences of
+  the old text are kept; the rest is built only from the row (cast, runtime, tags,
+  channel, source, a setting or episode number the title names). It never claims
+  picture quality, popularity or "no signup".
+- Test: `node scripts/test-movie-copy.mjs`.
+
+## 30. Edge gates, CI and indexing
+
+- `netlify/edge-functions/movie-gate.js` (movies) and `taxonomy-gate.js` (`/actor`,
+  `/category`, `/channel`, `/article`) answer 404 or 410 for addresses that do not exist and
+  pass everything else through; both fail open when Supabase is unreachable. Shared
+  helpers are in `netlify/edge-functions/lib/gate-common.js`. Tests:
+  `node scripts/test-movie-gate.mjs`, `node scripts/test-taxonomy-gate.mjs`.
+- `.github/workflows/ci.yml` runs the tests and the bundle build on pull requests and on
+  pushes to main. Add the secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to let
+  it also run the full prerender build.
+- Which pages are indexed is decided in `src/lib/indexing.js`: label tags
+  (`LABEL_TAGS`) and tag aliases never, other tags from 10 titles, performers from 5,
+  channels from 3, except the catch-all channel `VEXN` (`CATCH_ALL_CHANNELS`). The sitemap
+  generator and the page use the same function.
+- `public/sitemap*.xml` are generated by `npm run build` and are not committed.
+- A video that hits a blocked theme (`src/lib/contentRules.js`) is held: it stays visible but is
+  left out of the sitemaps and carries `noindex` (`isHeldMovie`) until it is decided.
+
+## 31. Admin: site content and channel views
+
+- `/admin/content` edits channel intros, performer bios, category pages and footer
+  partners (admin policies: migrations 009, 011, 014). Saved text shows in open pages on
+  the next load; the prerendered HTML changes at the next deploy.
+- `/admin/dashboard` shows views per channel (7, 30, 90 days, all time), the most viewed
+  videos of a channel and its views per day. It reads `page_views` through three
+  admin-only functions (migration 015); visitors cannot call them.
+- A video added without a channel goes into the `VEXN` channel
+  (`DEFAULT_CHANNEL` in `src/lib/siteConfig.js`).
+- Migration 016 adds `movies.search_compact` so a name typed without its space still
+  finds the video.
 
 ```
 src/
@@ -292,8 +573,32 @@ supabase/
   schema.sql            run this once for a brand-new project
   migrations/
     002_actors_channels.sql   run this against an existing DB (vxn.co.in)
+    003_admin_policies.sql    admin_users + admin-only write policies
+    004_close_public_writes.sql   removes public write access (run after deploy)
+    005_removed_movies.sql    table of removed movies for 410/301 answers
+    006_seed_removed_movies.sql   initial list of removed slugs
+    007_source_published_at.sql   date the source published a video
+    008_page_views_and_function_hardening.sql   page_views columns, bounded inserts
+    009_category_descriptions.sql   table for category page copy
+    010_seed_category_descriptions.sql   the written copy (generated)
+    011_footer_partners.sql   partner links for the footer
+    012_footer_partners_details.sql   longer text for the /partners page
+    013_movie_source.sql      source column; channel only for studios
+    014_admin_write_descriptions.sql   admins can write channel and performer text
+    015_admin_channel_views.sql        admin-only views-per-channel functions
+    016_search_compact.sql             name search without spaces
 scripts/
   generate-sitemap.mjs   runs before every build
+  test-movie-gate.mjs    offline test of the 404/410 edge function
+  test-seo-url.mjs       offline test of canonical / noindex rules
+  test-indexing.mjs      offline test of the taxonomy indexing rules
+  test-breadcrumbs.mjs   offline test of the breadcrumb trails
+  test-content-rules.mjs, test-weeks.mjs, test-related.mjs, test-partners.mjs,
+  test-dead-embeds.mjs, test-seo-text.mjs, test-page-view.mjs   other offline tests (npm test runs all)
+  check-dead-embeds.mjs  weekly source check (report only)
+  review-content.mjs     list catalogue rows that match the content rules
+  audit-pages.mjs        audit the prerendered pages in dist/
+  seed-category-descriptions.mjs   check + generate the category copy SQL
 sample-data/
   movies-template.csv
 ```

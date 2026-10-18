@@ -1,0 +1,59 @@
+# Runs on every pull request and on pushes to main (plan: CI for tests and build).
+#
+#   test   the offline test suites (`npm test`); no network, no secrets
+#   build  the client and server bundles must compile; with the two repository secrets below the
+#          full production build runs too (sitemap, prerender of every page from the live database)
+#
+# Optional repository secrets (Settings > Secrets and variables > Actions), the same public values as .env:
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+# Pull requests from forks have no secrets, so for them only the compile check runs.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
+    env:
+      HAS_SUPABASE: ${{ secrets.VITE_SUPABASE_URL != '' && secrets.VITE_SUPABASE_ANON_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Client and server bundles compile
+        run: |
+          npx vite build
+          npx vite build --ssr src/entry-server.jsx --outDir dist-ssr
+      - name: Full build with prerendered pages
+        if: env.HAS_SUPABASE == 'true'
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build

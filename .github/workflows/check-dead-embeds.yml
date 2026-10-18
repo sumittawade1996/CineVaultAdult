@@ -1,0 +1,37 @@
+# Weekly check that the Eporner / Pornhub videos VEXN embeds still exist at the
+# source (plan T18). Report only: it never changes or deletes anything. When a
+# video is confirmed removed the run fails, which makes GitHub send the usual
+# "workflow failed" email, and the list is attached to the run as check-embeds.csv.
+#
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY   (the same public values as in .env)
+name: Check removed videos
+
+on:
+  schedule:
+    - cron: '30 3 * * 1' # Mondays 03:30 UTC (09:00 IST)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Check every embedded video (about 1 request per second)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: node scripts/check-dead-embeds.mjs --out check-embeds.csv --fail-on-dead
+      - name: Attach the list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-embeds
+          path: check-embeds.csv
+          if-no-files-found: ignore
