@@ -14,7 +14,8 @@ create table if not exists movies (
   keywords text,             -- comma-separated, used for search + SEO
   tags text,                 -- comma-separated genres/categories e.g. "Action, Sci-Fi"
   actors text,               -- comma-separated cast names e.g. "Actor One, Actor Two"
-  channel text,               -- distribution source e.g. "Netflix", "Theatrical", "YouTube Originals"
+  channel text,               -- studio or collection e.g. "Nuru Massage", "Brazzers"; may be empty
+  source text,                -- site that hosts the player e.g. "Eporner" (migration 013)
   rating numeric(3,1),       -- e.g. 8.4
   runtime_minutes int,
   seo_title text,            -- optional override for <title>
@@ -81,16 +82,11 @@ create trigger trg_articles_updated_at before update on articles
 
 -- ROW LEVEL SECURITY -------------------------------------------------
 -- Public (anon key) can READ everything, but cannot write.
--- Bulk upload / admin pages should use these same policies for now —
--- see README "Locking down admin pages" for how to protect writes
--- with a Supabase Auth login before you go live.
+-- Writes are limited to signed-in admins: run migrations/003_admin_policies.sql
+-- (admin_users table + admin policies), then 004_close_public_writes.sql.
+-- Do NOT add public insert/update policies: the anon key ships in the browser.
 alter table movies enable row level security;
 alter table articles enable row level security;
 
 create policy "Public read movies" on movies for select using (true);
 create policy "Public read articles" on articles for select using (published = true);
-
-create policy "Public insert movies" on movies for insert with check (true);
-create policy "Public insert articles" on articles for insert with check (true);
-create policy "Public update movies" on movies for update using (true);
-create policy "Public update articles" on articles for update using (true);
