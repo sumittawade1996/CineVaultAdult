@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node scripts/generate-sitemap.mjs && vite build && vite build --ssr src/entry-server.jsx --outDir dist-ssr && node scripts/prerender.mjs",
     "sitemap": "node scripts/generate-sitemap.mjs",
-    "test": "node scripts/test-seo-url.mjs && node scripts/test-indexing.mjs && node scripts/test-breadcrumbs.mjs && node scripts/test-content-rules.mjs && node scripts/test-weeks.mjs && node scripts/test-partners.mjs && node scripts/test-related.mjs && node scripts/test-seo-text.mjs && node scripts/test-dead-embeds.mjs && node scripts/test-movie-gate.mjs && node scripts/test-taxonomy-gate.mjs && node scripts/test-page-view.mjs && node scripts/test-source.mjs && node scripts/test-categories.mjs && node scripts/test-taxonomy-facts.mjs && node scripts/test-article-dates.mjs && node scripts/test-promo.mjs && node scripts/test-movie-copy.mjs",
+    "test": "node scripts/test-seo-url.mjs && node scripts/test-indexing.mjs && node scripts/test-breadcrumbs.mjs && node scripts/test-content-rules.mjs && node scripts/test-weeks.mjs && node scripts/test-partners.mjs && node scripts/test-related.mjs && node scripts/test-seo-text.mjs && node scripts/test-dead-embeds.mjs && node scripts/test-movie-gate.mjs && node scripts/test-taxonomy-gate.mjs && node scripts/test-page-view.mjs && node scripts/test-source.mjs && node scripts/test-categories.mjs && node scripts/test-taxonomy-facts.mjs && node scripts/test-article-dates.mjs && node scripts/test-promo.mjs && node scripts/test-movie-copy.mjs && node scripts/test-install.mjs",
     "check-embeds": "node scripts/check-dead-embeds.mjs",
     "review-content": "node scripts/review-content.mjs",
     "seed-categories": "node scripts/seed-category-descriptions.mjs",

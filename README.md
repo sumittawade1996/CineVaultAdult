@@ -562,6 +562,21 @@ virgin themes, or hypnosis/unconscious themes.
 - Migration 016 adds `movies.search_compact` so a name typed without its space still
   finds the video.
 
+## 32. Install as an app, and page scrolling
+
+- `src/components/InstallButton.jsx` (header and phone menu) offers "Install app" when the browser
+  fires `beforeinstallprompt` (Chrome, Edge), and "Add to Home Screen" with the two steps on iPhone
+  and iPad. Nothing shows when the site is already installed or cannot be installed. The detection is
+  in `src/lib/installMode.js` (`node scripts/test-install.mjs`). For a local look at the iPhone
+  variant, open the dev server with `?installdemo=ios`.
+- `public/sw.js` is a minimal service worker (it makes the site installable and shows
+  `public/offline.html` when there is no connection); it caches nothing else. It is registered in
+  production builds only (`src/main.jsx`). `netlify.toml` serves the manifest with its proper type
+  and keeps `sw.js` uncached.
+- `src/lib/useScrollBehavior.js` and `src/lib/pageScroll.js`: a link opens the new page at the top,
+  a video page scrolls to its player and keeps it there while the page settles (until the visitor
+  scrolls), and Back returns to the same place in the list.
+
 ```
 src/
   components/   Navbar, Footer, MovieCard, AdSlot, Seo, ActiveUsers,

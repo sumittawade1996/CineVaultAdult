@@ -261,12 +261,37 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .mobile-menu-links a.active { color: var(--accent); }
 .mobile-menu-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: 14px;
 }
 .mobile-menu-foot .nav-aside { gap: 4px; }
+
+/* Install button (src/components/InstallButton.jsx): only rendered when the visitor can install the site */
+.install-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.install-btn--nav { margin-right: 4px; }
+.install-btn--menu { flex: 1 0 100%; justify-content: center; padding-block: 10px; }
+/* a narrow header keeps only the icon (the label stays in aria-label and the tooltip) */
+@media (min-width: 861px) and (max-width: 1260px) { .install-btn--nav .install-btn-text { display: none; } }
+.install-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 76px; /* above the sticky phone ad bar */
+  z-index: 70;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 16px 18px;
+  background: var(--surface-raised, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.install-hint-title { margin: 0 0 8px; font-weight: 600; }
+.install-hint ol { margin: 0 0 14px; padding-left: 20px; color: var(--text-muted); line-height: 1.7; }
+.install-hint svg { vertical-align: -3px; color: var(--accent); }
 
 @media (max-width: 1080px) {
   .navbar-inner { gap: 12px; }

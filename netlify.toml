@@ -497,6 +497,19 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
+# The service worker must be re-checked on every visit, or a fix to it would reach visitors late.
+# The web app manifest is served with its proper type (it used to go out as a generic file).
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=86400"
+
 # Every response is labelled as adult content (RTA label), matching the
 # <meta name="rating"> tag that <Seo> puts on every page.
 [[headers]]

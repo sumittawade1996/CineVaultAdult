@@ -36,3 +36,11 @@ if (prerendered) {
   container.replaceChildren()
   createRoot(container).render(app)
 }
+
+// Makes the site installable as an app and gives it an offline page (public/sw.js). Production only,
+// so the dev server and its hot reload are never affected.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {})
+  })
+}

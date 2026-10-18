@@ -6,6 +6,7 @@ import AdSlot from './components/AdSlot'
 import AgeGate from './components/AgeGate'
 import RequireAdmin from './components/RequireAdmin'
 import { useTrackPageView } from './lib/analytics'
+import { useScrollBehavior } from './lib/useScrollBehavior'
 import Home from './pages/Home'
 import Movies from './pages/Movies'
 
@@ -43,6 +44,7 @@ export default function App() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
   useTrackPageView()
+  useScrollBehavior() // new pages start at the top, Back returns to the place in the list
 
   return (
     <>

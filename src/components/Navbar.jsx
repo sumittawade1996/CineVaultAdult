@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import ActiveUsers from './ActiveUsers'
 import WatchShortcut from './WatchShortcut'
+import InstallButton from './InstallButton'
 import { SOCIAL_LINKS } from '../lib/siteConfig'
 
 const NAV = [
@@ -84,6 +85,7 @@ export default function Navbar() {
 
         <div className="nav-aside">
           <WatchShortcut variant="nav" />
+          <InstallButton variant="nav" />
           <ActiveUsers />
           <Social className="nav-social" />
           <Link to="/admin/upload" className="btn btn-outline btn-sm nav-admin">Admin</Link>
@@ -124,6 +126,7 @@ export default function Navbar() {
             ))}
           </div>
           <div className="mobile-menu-foot">
+            <InstallButton variant="menu" />
             <ActiveUsers />
             <div className="nav-aside">
               <Social className="nav-social" />

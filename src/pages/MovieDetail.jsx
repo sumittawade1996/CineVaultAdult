@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigationType, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { toEmbedUrl } from '../lib/video'
@@ -13,6 +13,7 @@ import Seo from '../components/Seo'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { movieCrumbs, breadcrumbJsonLd } from '../lib/breadcrumbs'
 import { isHeldMovie } from '../lib/indexing'
+import { pinToTop } from '../lib/pageScroll'
 import AdSlot from '../components/AdSlot'
 import MovieGrid from '../components/MovieGrid'
 import PosterPlaceholder from '../components/PosterPlaceholder'
@@ -93,6 +94,18 @@ export default function MovieDetail() {
   // Remember this video on the visitor's own device for the header's
   // "Continue watching" / "More <favourite>" shortcut buttons.
   useEffect(() => { if (movie?.slug) recordWatch(movie) }, [movie?.slug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opening a video from a list, or a related video from another video, brings its player into view
+  // instead of keeping the previous page's scroll position. Back/forward and arriving from outside
+  // (search result, bookmark) keep the browser's own position.
+  const navigationType = useNavigationType()
+  const playerRef = useRef(null)
+  useEffect(() => {
+    if (!movie?.slug || navigationType !== 'PUSH') return undefined
+    // keeps the player in place while the page settles (see src/lib/pageScroll.js); a video without a
+    // player starts at the top
+    return pinToTop(() => playerRef.current)
+  }, [movie?.slug, navigationType])
 
   // Hooks must run unconditionally on every render, so these are computed
   // before the early returns below (guarded with movie?.) even though
@@ -232,7 +245,7 @@ export default function MovieDetail() {
               </div>
             )}
             {embedUrl && (
-              <div className="trailer-frame">
+              <div className="trailer-frame" ref={playerRef}>
                 <iframe
                   width="100%"
                   height="100%"
