@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { buildTaxonomy, buildSingleTaxonomy } from '../lib/taxonomy'
+import { fetchAll } from '../lib/fetchAll'
 import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
@@ -18,10 +19,14 @@ export default function TaxonomyList({ field, single, title, seoTitle, basePath,
     let cancelled = false
     async function load() {
       const selectFields = withImages ? `${field}, poster_url, rating` : field
-      let query = supabase.from('movies').select(selectFields)
-      if (withImages) query = query.order('rating', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
+      // every movie, page by page: the database answers at most 1,000 rows per request (src/lib/fetchAll.js)
+      const buildQuery = () => {
+        let query = supabase.from('movies').select(selectFields)
+        if (withImages) query = query.order('rating', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
+        return query.order('id')
+      }
       const [{ data }, overridesRes] = await Promise.all([
-        query,
+        fetchAll(buildQuery),
         withImages ? supabase.from('category_image_overrides').select('slug, image_url') : Promise.resolve({ data: null }),
       ])
       if (cancelled) return

@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { slugify } from '../src/lib/slugify.js'
+import { fetchAll } from '../src/lib/fetchAll.js'
 import { buildTaxonomy, buildSingleTaxonomy } from '../src/lib/taxonomy.js'
 import { TAXONOMY_FIELDS } from '../src/lib/movieFields.js'
 import { summarizeWeeks, weekKey } from '../src/lib/weeks.js'
@@ -81,8 +82,9 @@ async function main() {
   // The same queries the pages run in the browser, so the preloaded state
   // is what the client's own refresh would produce.
   const [cards, fullMovies, articles, performerBios, channelBios, categoryCopy, partnerRows] = await Promise.all([
-    supabase.from('movies').select(TAXONOMY_FIELDS).order('created_at', { ascending: false }),
-    supabase.from('movies').select('*'),
+    // every movie, page by page: the database answers at most 1,000 rows per request (src/lib/fetchAll.js)
+    fetchAll(() => supabase.from('movies').select(TAXONOMY_FIELDS).order('created_at', { ascending: false }).order('id')),
+    fetchAll(() => supabase.from('movies').select('*').order('created_at', { ascending: false }).order('id')),
     supabase.from('articles').select('*').eq('published', true).order('created_at', { ascending: false }),
     supabase.from('performer_descriptions').select('slug,description'),
     supabase.from('channel_descriptions').select('slug,description'),

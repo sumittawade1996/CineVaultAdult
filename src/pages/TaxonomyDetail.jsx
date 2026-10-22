@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
+import { fetchAll } from '../lib/fetchAll'
 // Attribute tags, the Eporner channel and thin pages stay out of the index
 // (plan T10); scripts/generate-sitemap.mjs applies the same rules.
 import { isIndexableTaxonomy } from '../lib/indexing'
@@ -64,10 +65,13 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
       // niche actor no longer downloads the entire catalog to find their
       // handful of titles.
       const descTable = DESC_TABLE[field]
-      let query = supabase.from('movies').select(TAXONOMY_FIELDS).order('created_at', { ascending: false })
-      query = field === 'channel' ? query.eq('channel_slug', slug) : query.contains(`${field}_slugs`, [slug])
+      // page by page: a big category can match more than the 1,000 rows one request returns (src/lib/fetchAll.js)
+      const buildQuery = () => {
+        const query = supabase.from('movies').select(TAXONOMY_FIELDS).order('created_at', { ascending: false }).order('id')
+        return field === 'channel' ? query.eq('channel_slug', slug) : query.contains(`${field}_slugs`, [slug])
+      }
       const [{ data }, bioRes, catRes] = await Promise.all([
-        query,
+        fetchAll(buildQuery),
         descTable
           ? supabase.from(descTable).select('description').eq('slug', slug).maybeSingle()
           : Promise.resolve({ data: null }),

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import AdSlot from './components/AdSlot'
 import AgeGate from './components/AgeGate'
+import PushPrompt from './components/PushPrompt'
 import RequireAdmin from './components/RequireAdmin'
 import { useTrackPageView } from './lib/analytics'
 import { useScrollBehavior } from './lib/useScrollBehavior'
@@ -91,6 +92,7 @@ export default function App() {
         </div>
       )}
       <Footer />
+      <PushPrompt />
       {!isAdmin && <AdSlot slot="stickyMobile" />}
     </>
   )

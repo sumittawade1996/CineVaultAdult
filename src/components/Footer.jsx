@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { SITE_NAME, SOCIAL_LINKS } from '../lib/siteConfig'
 import usePartners from '../lib/usePartners'
+import PushButton from './PushButton'
 
 // More than this and the list lives on /partners only.
 const FOOTER_PARTNER_LIMIT = 8
@@ -51,6 +52,7 @@ export default function Footer() {
             <span>Telegram</span>
           </a>
         </div>
+        <PushButton />
         <nav className="footer-legal" aria-label="Legal">
           <Link to="/legal/terms">Terms</Link>
           <Link to="/legal/privacy">Privacy</Link>

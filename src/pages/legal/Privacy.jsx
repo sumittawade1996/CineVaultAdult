@@ -39,6 +39,17 @@ export default function Privacy() {
         visit. This stays on your device and is not sent to us.
       </p>
 
+      <h3>New-video alerts</h3>
+      <p>
+        If you press "Get new-video alerts" and allow notifications, your browser gives us a push address and two
+        encryption keys so we can send you one short notification a day when new videos are added. We store only
+        those three values (no name, email or other details) and use them only for that notification. The message
+        never shows a video title. You can turn the alerts off with the button in the footer or in your browser's
+        site settings, which deletes your entry; an entry is also deleted when your browser says it is no longer valid.
+        To decide when to offer the button, your browser also keeps a count of your visits in local storage; it is
+        not sent to us.
+      </p>
+
       <h2>4. Cookies and third-party advertising</h2>
       <p>
         Advertising partners shown on the Site may set their own cookies or use similar

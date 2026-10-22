@@ -5,8 +5,8 @@ import { getPosterUrl, IMAGE_CDN, optimizedPosterUrl, posterSrcSet } from '../li
 
 // Card widths across the breakpoints in index.css, so the browser can pick
 // the smallest optimized poster that still fills the box on its DPR.
-const CARD_SIZES = '(max-width: 640px) 46vw, (max-width: 1024px) 31vw, 240px'
-const FEATURED_SIZES = '(max-width: 640px) 46vw, (max-width: 1024px) 48vw, 440px'
+const CARD_SIZES = '(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 330px'
+const FEATURED_SIZES = '(max-width: 640px) 100vw, (max-width: 1024px) 48vw, 440px'
 
 // `priority` marks above-the-fold cards: those posters load eagerly (the
 // very first one with fetchpriority=high) so the grid's LCP image isn't

@@ -8,7 +8,6 @@ import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { getAdminSession, isAdminUser } from '../lib/adminAuth'
 import { usePreload } from '../lib/preload'
 import { candidateSpecs, pickRelated } from '../lib/related'
-import { recordWatch } from '../lib/watchHistory'
 import Seo from '../components/Seo'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { movieCrumbs, breadcrumbJsonLd } from '../lib/breadcrumbs'
@@ -90,10 +89,6 @@ export default function MovieDetail() {
     load()
     return () => { cancelled = true }
   }, [slug])
-
-  // Remember this video on the visitor's own device for the header's
-  // "Continue watching" / "More <favourite>" shortcut buttons.
-  useEffect(() => { if (movie?.slug) recordWatch(movie) }, [movie?.slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Opening a video from a list, or a related video from another video, brings its player into view
   // instead of keeping the previous page's scroll position. Back/forward and arriving from outside

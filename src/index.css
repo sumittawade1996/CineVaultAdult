@@ -270,6 +270,17 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .mobile-menu-foot .nav-aside { gap: 4px; }
 
 /* Install button (src/components/InstallButton.jsx): only rendered when the visitor can install the site */
+.push-alerts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin: 14px 0 4px; }
+.push-alerts-text { color: var(--text-muted); font-size: 13px; }
+.push-prompt {
+  position: fixed; z-index: 60; left: 50%; bottom: 14px; transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px)); box-sizing: border-box;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  padding: 12px 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.push-prompt p { margin: 0; flex: 1 1 240px; font-size: 14px; line-height: 1.45; }
+.push-prompt-actions { display: flex; gap: 8px; }
 .install-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .install-btn--nav { margin-right: 4px; }
 .install-btn--menu { flex: 1 0 100%; justify-content: center; padding-block: 10px; }
@@ -511,20 +522,21 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 /* ============================================================
    Movie grid + card
    ============================================================ */
+/* Four cards per row on laptops and desktops, two on tablets, one on phones. */
 .movie-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
 }
-@media (min-width: 1600px) {
-  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: 4px; }
+@media (max-width: 1023px) {
+  .movie-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* Featured titles get larger cards: a stronger hierarchy on the homepage,
    and the six featured cards span two rows on desktop. */
 .movie-grid--featured { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 .movie-grid--featured .movie-title { font-size: 17px; }
 @media (max-width: 640px) {
-  .movie-grid, .movie-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2px; row-gap: 3px; }
+  .movie-grid, .movie-grid--featured { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
 /* In-feed ad rendered as one full-width row of the grid. It is the 7th
    child in the DOM (after three phone rows); wider layouts reorder it to

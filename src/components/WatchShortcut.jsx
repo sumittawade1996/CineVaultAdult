@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { getShortcuts, INDIAN_SHORTCUT } from '../lib/watchHistory'
+import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { forgetWatchHistory, INDIAN_SHORTCUT } from '../lib/watchHistory'
 
 function PlayIcon() {
   return (
@@ -10,51 +10,34 @@ function PlayIcon() {
   )
 }
 
-// Server render and first client render both show the Indian shortcut, so
-// hydration matches; the visitor's own history (if any) swaps in right after.
-function useShortcuts() {
-  const { pathname } = useLocation()
-  const [items, setItems] = useState([INDIAN_SHORTCUT])
-  useEffect(() => {
-    const refresh = () => setItems(getShortcuts())
-    refresh()
-    window.addEventListener('vexn-watch', refresh)
-    return () => window.removeEventListener('vexn-watch', refresh)
-  }, [pathname])
-  return items
-}
-
+// The same "Watch Indian movies" button for every visitor (no "Continue watching" or "More <favourite>" buttons).
 // variant "nav"    -> one button in the desktop header
 // variant "mobile" -> one compact pill in the phone header
-// variant "hero"   -> the full row under the homepage heading
+// variant "hero"   -> the button under the homepage heading
 export default function WatchShortcut({ variant = 'nav' }) {
-  const items = useShortcuts()
+  const s = INDIAN_SHORTCUT
+  // clears the record the earlier, personalised version left in the visitor's browser
+  useEffect(() => { forgetWatchHistory() }, [])
 
   if (variant === 'hero') {
     return (
       <div className="watch-row" aria-label="Quick watch">
-        {items.map((s, i) => (
-          <Link key={s.to} to={s.to} className={`btn watch-btn${i === 0 ? '' : ' btn-outline'}`} data-kind={s.kind}>
-            <PlayIcon />
-            <span className="watch-btn-text">
-              {s.label}
-              {s.sub && <small>{s.sub}</small>}
-            </span>
-          </Link>
-        ))}
+        <Link to={s.to} className="btn watch-btn" data-kind={s.kind}>
+          <PlayIcon />
+          <span className="watch-btn-text">{s.label}</span>
+        </Link>
       </div>
     )
   }
 
-  const s = items[0]
   const mobile = variant === 'mobile'
   return (
     <Link
       to={s.to}
       className={`btn btn-sm ${mobile ? 'nav-watch-mobile' : 'nav-watch'}`}
       data-kind={s.kind}
-      title={s.sub || s.label}
-      aria-label={s.sub ? `${s.label}: ${s.sub}` : s.label}
+      title={s.label}
+      aria-label={s.label}
     >
       <PlayIcon />
       {mobile ? s.short : s.label}

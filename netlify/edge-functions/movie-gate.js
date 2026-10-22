@@ -54,16 +54,25 @@ function posterUrl(movie) {
   return yt ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : null
 }
 
-// imggen.eporner.com posters (1920x1080 originals) showed up as a blank,
-// image-less link card in X's composer even though the file itself loads
-// fine from a normal client. Serving them through Netlify's Image CDN (a
-// resized JPEG on our own domain) sidesteps whatever X's fetcher trips on.
+// imggen.eporner.com posters showed up as a blank, image-less link card in
+// X's composer even though the file itself loads fine from a normal client, so
+// they are served from our own domain instead:
+//   - posters of the form imggen.eporner.com/<id>/<w>/<h>/<n>.jpg go through
+//     /og-img/ (netlify/edge-functions/og-image.js), a plain pass-through that
+//     answers in a fraction of a second and is cached for a year. Netlify's
+//     Image CDN, used before, resizes on the first request, which took 1-10 s
+//     and made X give up and cache an image-less card.
+//   - any other imggen address still goes through the Image CDN.
 // Other poster hosts rendered fine and are left untouched.
+// -> { url, width, height } (width and height are null when not known)
 function cardImage(url) {
-  if (url && /^https:\/\/imggen\.eporner\.com\//.test(url)) {
-    return `${SITE_URL}/.netlify/images?url=${encodeURIComponent(url)}&w=1200&fm=jpg&q=80`
+  if (!url) return { url: null, width: null, height: null }
+  const m = String(url).match(/^https:\/\/imggen\.eporner\.com\/(\d{1,10})\/(\d{2,4})\/(\d{2,4})\/(\d{1,3})\.jpg$/)
+  if (m) return { url: `${SITE_URL}/og-img/${m[1]}/${m[2]}/${m[3]}/${m[4]}.jpg`, width: Number(m[2]), height: Number(m[3]) }
+  if (/^https:\/\/imggen\.eporner\.com\//.test(url)) {
+    return { url: `${SITE_URL}/.netlify/images?url=${encodeURIComponent(url)}&w=1200&fm=jpg&q=80`, width: 1200, height: null }
   }
-  return url
+  return { url, width: null, height: null }
 }
 
 function escapeHtml(str) {
@@ -131,7 +140,11 @@ function redirectTo(request, target) {
 function previewResponse(movie, pathname) {
   const title = movie.seo_title || movie.title
   const description = movie.seo_description || movie.description || `Watch ${movie.title} free on ${SITE_NAME}.`
-  const image = cardImage(posterUrl(movie)) || DEFAULT_OG_IMAGE
+  const card = cardImage(posterUrl(movie))
+  const image = card.url || DEFAULT_OG_IMAGE
+  const size = card.url && card.width && card.height
+    ? `\n<meta property="og:image:width" content="${card.width}">\n<meta property="og:image:height" content="${card.height}">`
+    : ''
   const canonical = `${SITE_URL}${pathname}`
 
   const html = `<!doctype html>
@@ -145,10 +158,13 @@ function previewResponse(movie, pathname) {
 <meta property="og:site_name" content="${SITE_NAME}">
 <meta property="og:title" content="${escapeHtml(title)} | ${SITE_NAME}">
 <meta property="og:description" content="${escapeHtml(description)}">
-<meta property="og:image" content="${escapeHtml(image)}">
+<meta property="og:image" content="${escapeHtml(image)}">${size}
 <meta property="og:url" content="${escapeHtml(canonical)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="${TWITTER_HANDLE}">
+<meta name="twitter:title" content="${escapeHtml(title)} | ${SITE_NAME}">
+<meta name="twitter:description" content="${escapeHtml(description)}">
+<meta name="twitter:image" content="${escapeHtml(image)}">
 </head>
 <body></body>
 </html>

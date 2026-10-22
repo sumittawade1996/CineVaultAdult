@@ -577,6 +577,38 @@ virgin themes, or hypnosis/unconscious themes.
   a video page scrolls to its player and keeps it there while the page settles (until the visitor
   scrolls), and Back returns to the same place in the list.
 
+## 33. Importing studio videos from Eporner
+
+- `node scripts/import-eporner-studios.mjs` (options `--studios=brazzers,vixen,bangbros,adult-time`,
+  `--per=25`, `--min=20`, `--max=90`) finds the newest videos of those studios on Eporner and writes
+  SQL batches, a `report.csv` and a `summary.json` to `Downloads/vexn_import_<date>/`. It only reads
+  (Eporner and the site's database); applying the SQL is a separate step, because the public key cannot
+  write to `movies` (migration 004): run the batches in the Supabase SQL editor.
+- Rules are in `scripts/lib/studioImport.mjs` (tests: `node scripts/test-studio-import.mjs`): 20 minutes or
+  longer (at most 90, so a compilation is not mistaken for a scene), newest first, no blowjob videos,
+  `src/lib/contentRules.js` plus a stricter guard (school and age words, trans and gay content,
+  compilations), the studio named in the title or keywords (or the official channel), not already on the site.
+- Eporner's own studio channels mostly post short trailers (Brazzers, Bangbros and Adult Time have none over
+  16 minutes), so full scenes come from regular uploads that name the studio; Vixen's official channel has
+  longer scenes and is used directly. "AdultPrime" has no videos on Eporner; Adult Time stands in for it.
+- The search title is "Cast – Scene – Studio" (30-53 characters); the search description names the studio,
+  the performers, the length and the most searched tags, ordered by our own traffic (`TREND` in the lib),
+  in 140-160 characters. The on-page description comes from `scripts/lib/movieCopy.mjs`.
+- Applied 18-20 Oct 2026 (82 videos, all 20+ minutes, none with a blowjob tag or title): Brazzers 21,
+  Vixen 13, Bangbros 25 (new channel), Adult Time 23. Vixen stays below 20 because only 13 scenes pass the
+  rules; about 9 more exist if blowjob-tagged videos were allowed (`--allow-blowjob` writes them to a separate
+  `_blowjob-held` folder and they are never applied without the owner's say-so). Two Adult Time rows were left
+  out by hand (a family-themed title and a title that was only a date). Rows from Eporner's low-quality
+  listings and rows where the studio is only in the keywords are marked in `report.csv`.
+- Prerendered pages and the sitemap only include the new videos after the next `npm run build` and push.
+- Web series: `node scripts/import-eporner-webseries.mjs` (options `--total=50 --min=20 --max=120 --channels=ullu,fliz-movies,rabbit-movies`)
+  does the same for Ullu, Fliz Movies and Rabbit Movies (logic in `scripts/lib/webSeries.mjs`, tests in
+  `scripts/test-web-series.mjs`). Upload titles are cleaned into "Series (Year) S01E02 – Hindi Ullu Web Series (31 Min)"
+  (domains, file names, broken characters, quality words removed), uploads whose title is a Hindi sentence describing
+  the scene are skipped, and Hindi forced/family/in-law words plus the English content rules and "no blowjob" apply.
+  Search texts lead with "Indian" and "Desi" (the most searched tags in our own traffic). Applied 20 Oct 2026: 50
+  episodes (Ullu 36, Fliz Movies 9, Rabbit Movies 5), all 20+ minutes, posters are Eporner's 1280x720 picture.
+
 ```
 src/
   components/   Navbar, Footer, MovieCard, AdSlot, Seo, ActiveUsers,
@@ -621,3 +653,27 @@ scripts/
 sample-data/
   movies-template.csv
 ```
+
+## 34. Link cards on X, referring sites, four-per-row grid, new-video alerts (built locally 2026-10-23, not deployed)
+
+- **X link cards.** `netlify/edge-functions/og-image.js` serves `/og-img/<id>/<w>/<h>/<n>.jpg` as a plain pass-through of
+  `https://imggen.eporner.com/<id>/<w>/<h>/<n>.jpg` with a one-year cache; `movie-gate.js` points `og:image` and
+  `twitter:image` at it (and adds `og:image:width/height`, `twitter:title/description`). Before, the image went through
+  Netlify's Image CDN, which resizes on the first request (1-10 s), and X gave up and kept an image-less card for about a week.
+  If the poster cannot be fetched the route redirects to the Image CDN. Do not add `/og-img/` to robots.txt: X obeys it for images.
+  Tests: `scripts/test-movie-gate.mjs`. Links that already got an empty card can be re-shared with a harmless `?v=2`.
+- **Top referring sites.** Migration 017 adds `admin_referrers(p_days, p_limit)` (admin only, grouped by site, bots and our own
+  pages left out); `/admin/dashboard` shows it below the channel table.
+- **Grid.** `.movie-grid` is four columns from 1024 px, two from 641 to 1023 px and one up to 640 px (`src/index.css`);
+  the image size hints in `MovieCard.jsx` match.
+- **New-video alerts (web push).** Migration 018 (`push_subscriptions`, visitors can only call `push_subscribe` and
+  `push_unsubscribe`), `src/lib/push.js`, `src/components/PushPrompt.jsx` (a one-tap bar "Get one alert a day when new videos are added" on the second visit, rules in `src/lib/pushPolicy.js`; "Not now" hides it for 14 days, turning the alerts off means never asked again), `src/components/PushButton.jsx` (footer, offered from the second visit or in the
+  installed app, permission only on a click), push handlers in `public/sw.js`, a privacy-policy paragraph, and
+  `scripts/send-push.mjs` + `.github/workflows/send-push.yml` (daily 19:00 IST, one neutral digest "New videos were added
+  today", never a title; dry run by default, `--send` sends; expired subscriptions are deleted). Needs `VITE_VAPID_PUBLIC_KEY`
+  in Netlify (the button stays hidden without it) and the GitHub secrets `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`; until they exist the sender says so and stops without an error. Tests:
+  `scripts/test-push.mjs`.
+- **Watch button.** The header and the homepage show only "Watch Indian movies" for everyone (`src/components/WatchShortcut.jsx`).
+  The personalised "Continue watching" and "More <favourite>" buttons were removed at the owner's request, together with the record of
+  the last video that fed them; the old record is deleted from a visitor's browser on their next visit.

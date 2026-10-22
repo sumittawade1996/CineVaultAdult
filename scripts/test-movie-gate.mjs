@@ -14,7 +14,7 @@ const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0 Safari/5
 const GOOGLEBOT = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
 const TWITTERBOT = 'Twitterbot/1.0'
 
-const state = { removed: [], movies: [], down: false, calls: [] }
+const state = { removed: [], movies: [], down: false, calls: [], imggen: 'ok' }
 
 globalThis.Netlify = {
   env: { get: (k) => ({ VITE_SUPABASE_URL: 'https://sb.test', VITE_SUPABASE_ANON_KEY: 'anon' })[k] },
@@ -22,6 +22,12 @@ globalThis.Netlify = {
 globalThis.fetch = async (input) => {
   const u = String(input)
   state.calls.push(u)
+  if (u.startsWith('https://imggen.eporner.com/')) {
+    if (state.imggen === 'down') throw new Error('imggen down')
+    if (state.imggen === 'html') return new Response('<html></html>', { headers: { 'content-type': 'text/html' } })
+    if (state.imggen === 'huge') return new Response('x', { headers: { 'content-type': 'image/jpeg', 'content-length': String(9 * 1024 * 1024) } })
+    return new Response(new Uint8Array([255, 216, 255, 217]), { headers: { 'content-type': 'image/jpeg', 'content-length': '4' } })
+  }
   if (u.endsWith('/app.html')) return new Response(SHELL, { headers: { 'content-type': 'text/html' } })
   if (state.down) throw new Error('supabase down')
   if (u.includes('/rest/v1/removed_movies')) return Response.json(state.removed)
@@ -109,7 +115,71 @@ test('link-preview bot gets live Open Graph tags for an existing movie', async (
   const { res, text } = await run({ slug: 'live-one', ua: TWITTERBOT, next: 'shell', movies: [movie] })
   assert.equal(res.status, 200)
   assert.ok(text.includes('og:title') && text.includes('Live One SEO'))
-  assert.ok(text.includes('/.netlify/images?url='), 'imggen poster is proxied through the Image CDN')
+  assert.ok(text.includes('https://vexn.org/og-img/1/1280/720/1.jpg'), 'imggen poster is served by the pass-through route')
+  assert.ok(!text.includes('/.netlify/images'), 'no resize on the first request')
+  assert.ok(text.includes('name="twitter:image" content="https://vexn.org/og-img/1/1280/720/1.jpg"'), 'twitter:image is set')
+  assert.ok(text.includes('og:image:width" content="1280"') && text.includes('og:image:height" content="720"'), 'image size is given')
+  assert.ok(text.includes('name="twitter:title"') && text.includes('name="twitter:description"'))
+})
+
+test('an imggen poster of another shape still goes through the Image CDN', async () => {
+  const movie = { slug: 'odd', title: 'Odd', poster_url: 'https://imggen.eporner.com/some/other/path.webp' }
+  const { text } = await run({ slug: 'odd', ua: TWITTERBOT, next: 'shell', movies: [movie] })
+  assert.ok(text.includes('/.netlify/images?url='))
+})
+
+test('a poster on another host is left untouched', async () => {
+  const movie = { slug: 'other', title: 'Other', poster_url: 'https://static-eu-cdn.eporner.com/thumbs/1/2/3.jpg' }
+  const { text } = await run({ slug: 'other', ua: TWITTERBOT, next: 'shell', movies: [movie] })
+  assert.ok(text.includes('og:image" content="https://static-eu-cdn.eporner.com/thumbs/1/2/3.jpg"'))
+  assert.ok(!text.includes('og:image:width'))
+})
+
+test('a movie without a poster uses the default share image', async () => {
+  const { text } = await run({ slug: 'bare', ua: TWITTERBOT, next: 'shell', movies: [{ slug: 'bare', title: 'Bare' }] })
+  assert.ok(text.includes('https://vexn.org/og-default.png'))
+})
+
+// ---- /og-img/ pass-through (netlify/edge-functions/og-image.js)
+async function og(path, { method = 'GET', imggen = 'ok' } = {}) {
+  state.imggen = imggen
+  state.calls = []
+  const mod = await import('../netlify/edge-functions/og-image.js?og=' + ++n)
+  return mod.default(new Request('https://vexn.org' + path, { method }), {})
+}
+
+test('og-img passes the poster through with a year-long cache', async () => {
+  const res = await og('/og-img/10960720/1280/720/1.jpg')
+  assert.equal(res.status, 200)
+  assert.equal(res.headers.get('content-type'), 'image/jpeg')
+  assert.match(res.headers.get('cache-control'), /max-age=31536000/)
+  assert.match(res.headers.get('netlify-cdn-cache-control'), /s-maxage=31536000/)
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex')
+  assert.equal((await res.arrayBuffer()).byteLength, 4)
+  assert.deepEqual(state.calls, ['https://imggen.eporner.com/10960720/1280/720/1.jpg'])
+})
+
+test('og-img only fetches digits-only imggen paths', async () => {
+  for (const bad of ['/og-img/../x.jpg', '/og-img/1/2/3/4.png', '/og-img/a/1280/720/1.jpg', '/og-img/1/1280/720/1.jpg/extra', '/og-img/123456789012/1280/720/1.jpg']) {
+    const res = await og(bad)
+    assert.equal(res.status, 404, bad)
+    assert.equal(state.calls.length, 0, 'nothing was fetched for ' + bad)
+  }
+})
+
+test('og-img answers HEAD without a body and refuses other methods', async () => {
+  const head = await og('/og-img/1/1280/720/1.jpg', { method: 'HEAD' })
+  assert.equal(head.status, 200)
+  assert.equal((await head.arrayBuffer()).byteLength, 0)
+  assert.equal((await og('/og-img/1/1280/720/1.jpg', { method: 'POST' })).status, 404)
+})
+
+test('og-img falls back to the Image CDN when the poster cannot be fetched or is not an image', async () => {
+  for (const imggen of ['down', 'html', 'huge']) {
+    const res = await og('/og-img/1/1280/720/1.jpg', { imggen })
+    assert.equal(res.status, 302, imggen)
+    assert.ok(res.headers.get('location').startsWith('https://vexn.org/.netlify/images?url=https%3A%2F%2Fimggen.eporner.com%2F1%2F1280%2F720%2F1.jpg'), imggen)
+  }
 })
 
 test('link-preview bot on a removed slug gets 410, not a preview', async () => {

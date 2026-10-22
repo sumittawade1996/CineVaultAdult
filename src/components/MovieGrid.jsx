@@ -1,16 +1,17 @@
 import MovieCard from './MovieCard'
 import AdSlot from './AdSlot'
 
-// How many leading cards count as above-the-fold. Two mobile rows / one
-// desktop row is enough to cover the LCP candidate on every viewport.
+// How many leading cards count as above-the-fold. Four cards is one desktop
+// row (four per row) and the first screens of the one-per-row phone layout,
+// enough to cover the LCP candidate on every viewport.
 const EAGER_COUNT = 4
 
 // The in-feed ad is a full-width row inside the grid, placed beneath the
 // first viewport so the ad network's late-arriving image never becomes
-// the page's LCP element. It sits after 6 cards in the DOM (three phone
-// rows); index.css moves it after 12 cards on wider screens with CSS
-// `order`, and hides it there when the grid is too short — done in CSS
-// so the prerendered HTML is identical for every viewport.
+// the page's LCP element. It sits after 6 cards in the DOM (six phone
+// rows, one card each); index.css moves it after 12 cards on wider screens
+// (three rows of four) with CSS `order`, and hides it there when the grid is
+// too short — done in CSS so the prerendered HTML is identical for every viewport.
 const AD_AFTER_PHONE = 6
 const AD_AFTER_DESKTOP = 12
 

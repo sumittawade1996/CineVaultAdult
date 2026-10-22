@@ -17,6 +17,37 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// New-video alerts (see scripts/send-push.mjs). The message is one neutral line, so no video title ever
+// appears on a lock screen; tapping it opens the "New" page (or the same-site path the message carries).
+self.addEventListener('push', (event) => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { data = {} }
+  event.waitUntil(
+    self.registration.showNotification(String(data.title || 'VEXN').slice(0, 60), {
+      body: String(data.body || 'New videos were added.').slice(0, 120),
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'vexn-new-videos', // a newer alert replaces an unread older one
+      data: { url: typeof data.url === 'string' && /^\/[^/]/.test(data.url) ? data.url : '/new' },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = new URL((event.notification.data && event.notification.data.url) || '/new', self.location.origin).href
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.navigate(target).then(() => client.focus()).catch(() => client.focus())
+        }
+      }
+      return self.clients.openWindow(target)
+    })
+  )
+})
+
 self.addEventListener('fetch', (event) => {
   const request = event.request
   // Only page navigations: try the network, and fall back to the offline page when there is none.

@@ -15,6 +15,8 @@ const PERIODS = [
 ]
 const SPECIAL = new Set(['(no channel)', '(removed or renamed videos)'])
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN')
+// Names for the referrer rows that are not a plain website address
+const REFERRER_LABEL = { '(direct)': 'Direct (typed, bookmarks, apps, hidden referrer)', 't.co': 'X (t.co links)', 'so.com': 'so.com (360 Search)' }
 
 export default function AdminDashboard() {
   const [days, setDays] = useState(30)
@@ -22,6 +24,19 @@ export default function AdminDashboard() {
   const [selected, setSelected] = useState(null)
   const [detail, setDetail] = useState({ top: [], daily: [], loading: false })
   const [error, setError] = useState(null)
+  const [refs, setRefs] = useState(null)
+
+  // Where visits came from (supabase/migrations/017_admin_referrers.sql)
+  useEffect(() => {
+    let cancelled = false
+    setRefs(null)
+    supabase.rpc('admin_referrers', { p_days: days, p_limit: 25 }).then(({ data, error: err }) => {
+      if (cancelled) return
+      if (err) setError(err.message)
+      else setRefs(data || [])
+    })
+    return () => { cancelled = true }
+  }, [days])
 
   useEffect(() => {
     let cancelled = false
@@ -156,6 +171,52 @@ export default function AdminDashboard() {
                 )}
               </section>
             )}
+
+            <section aria-label="Top referring sites" style={{ marginTop: 36 }}>
+              <div className="section-head"><h2>Top referring sites</h2></div>
+              {!refs && <p className="hint" style={{ color: 'var(--text-muted)' }}>Loading…</p>}
+              {refs && refs.length === 0 && <p className="hint" style={{ color: 'var(--text-muted)' }}>No visits with a referrer in this period.</p>}
+              {refs && refs.length > 0 && (() => {
+                const outside = refs.filter((r) => r.site !== '(direct)')
+                const top = Math.max(1, ...refs.map((r) => Number(r.visits)))
+                return (
+                  <>
+                    <div className="admin-tiles">
+                      <div><span>Sites that sent visits</span><strong>{fmt(outside.length)}</strong><small>top 25 shown, direct visits not counted</small></div>
+                      <div><span>Visits from other sites</span><strong>{fmt(outside.reduce((s, r) => s + Number(r.visits), 0))}</strong></div>
+                      <div><span>Direct visits</span><strong>{fmt(refs.find((r) => r.site === '(direct)')?.visits)}</strong></div>
+                    </div>
+                    <div className="admin-table-wrap">
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Site</th>
+                            <th scope="col" className="num">Visits</th>
+                            <th scope="col" className="num">Visitors</th>
+                            <th scope="col">Share of the top row</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {refs.map((r) => (
+                            <tr key={r.site}>
+                              <th scope="row">{REFERRER_LABEL[r.site] || r.site}</th>
+                              <td className="num"><strong>{fmt(r.visits)}</strong></td>
+                              <td className="num">{fmt(r.visitors)}</td>
+                              <td><span className="share-bar" aria-hidden="true"><i style={{ width: `${(Number(r.visits) / top) * 100}%` }} /></span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="hint" style={{ color: 'var(--text-muted)', maxWidth: '78ch', lineHeight: 1.6, marginTop: 12 }}>
+                      The site a visitor came from, as the browser reports it. Some sites hide it, so "Direct" includes those. Visits between our own
+                      pages are left out. "Visitors" counts sessions and is lower than the real number for older rows, which carry no session id.
+                      Links that nobody clicked do not show here: use Search Console or Ahrefs for all backlinks.
+                    </p>
+                  </>
+                )
+              })()}
+            </section>
 
             <p className="hint" style={{ color: 'var(--text-muted)', maxWidth: '78ch', lineHeight: 1.6, marginTop: 24 }}>
               First-party counts from this site only (not Google or the player sites). Rows from the older tracking carry no bot marker and
