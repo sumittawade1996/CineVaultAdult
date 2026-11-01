@@ -58,7 +58,7 @@ export const mentionsBlowjob = (text) => BLOWJOB.test(String(text || ''))
 // Why a video does not qualify, or null when it does. v: { title, keywords, length_sec }
 // allowKeywordBrand: an upload that names the studio only in its keywords may pass (the importer then
 // requires a credited performer and marks the row); allowBlowjob: only for preparing a held set, never applied unasked
-export function excludeReason(v, studio, { minMinutes = 20, maxMinutes = 90, verifiedChannel = false, allowKeywordBrand = false, allowBlowjob = false } = {}) {
+export function excludeReason(v, studio, { minMinutes = 20, maxMinutes = 90, verifiedChannel = false, allowKeywordBrand = false, allowBlowjob = false, selfBrand = null } = {}) {
   const text = `${v.title || ''} ${v.keywords || ''}`
   const minutes = (v.length_sec || 0) / 60
   if (minutes < minMinutes) return `under ${minMinutes} minutes`
@@ -67,9 +67,11 @@ export function excludeReason(v, studio, { minMinutes = 20, maxMinutes = 90, ver
   const letters = (v.title || '').replace(/[^\p{L}]/gu, '')
   if (letters.length < 3 || letters.replace(/[^A-Za-z]/g, '').length / letters.length < 0.8 || /Ã|â€/.test(v.title || '')) return 'unreadable title'
   if (/\bsc\d+\b/i.test(v.title || '') || /(?:\w+\.){3,}\w/.test(v.title || '')) return 'file-name style title' // "Sc7", ".17.02.08.name.XXX"
-  // another studio, or one of the other three importer studios, named in the title
+  // another studio, or one of the other three importer studios, named in the title; selfBrand names the
+  // source being imported itself (e.g. importing a channel's own listing, where its name is expected)
   const own = Object.values(STUDIOS).filter((s) => s.name !== studio.name)
-  if (OTHER_STUDIO.test(v.title || '') || own.some((s) => s.brand.test(v.title || ''))) return 'names another studio'
+  const otherHit = (v.title || '').match(OTHER_STUDIO)
+  if ((otherHit && !(selfBrand && selfBrand.test(otherHit[0]))) || own.some((s) => s.brand.test(v.title || ''))) return 'names another studio'
   if (!verifiedChannel && !studio.brand.test(text)) return 'studio not named'
   // an upload (not the studio's own channel) must name the studio in its TITLE and must not look like amateur content
   if (!verifiedChannel && !allowKeywordBrand && !studio.brand.test(v.title || '')) return 'studio only in keywords'
@@ -216,7 +218,7 @@ const ACRONYMS = new Set(['MILF', 'PAWG', 'GILF', 'BBW', 'JAV', 'DILF', 'POV'])
 // Cut at a word, then drop what would dangle ("Gets A New", "Through", "And"): a cut title should still read as a phrase
 const TAIL_WORD = /\s+(?:a|an|the|of|in|with|and|or|to|for|her|his|their|my|your|our|on|at|by|from|through|into|onto|over|under|after|before|about|between|but|as|that|this|some|up|off)$/i
 const TAIL_PAIR = /\s+(?:a|an|the|her|his|their|my|your|our|this|that|some)\s+\S+$/i
-function clipWords(text, max) {
+export function clipWords(text, max) {
   if (text.length <= max) return text
   let cut = text.slice(0, max + 1).replace(/\s+\S*$/, '').replace(/[\s,–—:&-]+$/, '')
   for (let i = 0; i < 4; i++) {

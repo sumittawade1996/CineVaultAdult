@@ -608,6 +608,13 @@ virgin themes, or hypnosis/unconscious themes.
   the scene are skipped, and Hindi forced/family/in-law words plus the English content rules and "no blowjob" apply.
   Search texts lead with "Indian" and "Desi" (the most searched tags in our own traffic). Applied 20 Oct 2026: 50
   episodes (Ullu 36, Fliz Movies 9, Rabbit Movies 5), all 20+ minutes, posters are Eporner's 1280x720 picture.
+- Any Eporner tag listing: `node scripts/import-eporner-tag.mjs --tag=japanese-big-tits --sort=top-monthly,top-weekly,top-rated
+  --tags="Japanese,Big Tits,Asian" --require="japanese,big tits" --per=30` (logic in `scripts/lib/tagImport.mjs`, tests in
+  `scripts/test-tag-import.mjs`). It takes the videos in the ranking's own order and uses the tag's label ("Japanese Big Tits")
+  where a studio's name would be in the search title, search description and address. `--require` matters: a listing page also
+  shows videos that do not carry the tag. Later pages of a tag repeat the first ones, so a tag is a pool of roughly 100-160
+  videos, and the 20-minute, no-blowjob, readable-English-title rules leave a few of them (Japanese big tits, 23 Oct 2026: 3 rows
+  applied; 23 more only with `--allow-blowjob`, written to a `_blowjob-held` folder and never applied without the owner's say-so).
 
 ```
 src/
@@ -654,7 +661,7 @@ sample-data/
   movies-template.csv
 ```
 
-## 34. Link cards on X, referring sites, four-per-row grid, new-video alerts (built locally 2026-10-23, not deployed)
+## 34. Link cards on X, referring sites, four-per-row grid, new-video alerts (live since 2026-10-23)
 
 - **X link cards.** `netlify/edge-functions/og-image.js` serves `/og-img/<id>/<w>/<h>/<n>.jpg` as a plain pass-through of
   `https://imggen.eporner.com/<id>/<w>/<h>/<n>.jpg` with a one-year cache; `movie-gate.js` points `og:image` and
@@ -662,6 +669,10 @@ sample-data/
   Netlify's Image CDN, which resizes on the first request (1-10 s), and X gave up and kept an image-less card for about a week.
   If the poster cannot be fetched the route redirects to the Image CDN. Do not add `/og-img/` to robots.txt: X obeys it for images.
   Tests: `scripts/test-movie-gate.mjs`. Links that already got an empty card can be re-shared with a harmless `?v=2`.
+  `npm run check:cards` (`scripts/check-cards.mjs`) asks for every movie page as Twitterbot, checks the card tags and fetches
+  each card image once. The first fetch of an image can take 4-13 s (Eporner's image server), after which the route caches it
+  for a year, so run it after a deploy or an import. A card whose image is `404` on every frame belongs to a video Eporner
+  removed (its embed redirects to `/embed404/`): such a card can never show a picture, and the video itself no longer plays.
 - **Top referring sites.** Migration 017 adds `admin_referrers(p_days, p_limit)` (admin only, grouped by site, bots and our own
   pages left out); `/admin/dashboard` shows it below the channel table.
 - **Grid.** `.movie-grid` is four columns from 1024 px, two from 641 to 1023 px and one up to 640 px (`src/index.css`);
