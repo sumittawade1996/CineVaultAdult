@@ -615,6 +615,17 @@ virgin themes, or hypnosis/unconscious themes.
   shows videos that do not carry the tag. Later pages of a tag repeat the first ones, so a tag is a pool of roughly 100-160
   videos, and the 20-minute, no-blowjob, readable-English-title rules leave a few of them (Japanese big tits, 23 Oct 2026: 3 rows
   applied; 23 more only with `--allow-blowjob`, written to a `_blowjob-held` folder and never applied without the owner's say-so).
+- Pornstar, channel and profile-upload listings (not just tags): `node scripts/import-eporner-source.mjs --kind=pornstar
+  --slug=lexi-luna-Np43S --sort=longest --label="Lexi Luna" --tags="Lexi Luna,Big Tits" --min=20 --per=20` (`--kind=channel` or
+  `--kind=profile` instead; `--sort` can be omitted for a plain listing page). Same rules and output as the tag importer; logic
+  in `scripts/lib/tagImport.mjs` plus the URL builder in the script itself, since pornstar/channel/profile listings share the
+  tag listing's markup but each puts the page number in a different place (a profile's is `uploaded-videos/<page>/<sort>/`,
+  reversed from `/tag/<x>/<sort>/<page>/`). A channel's own videos are no longer flagged "names another studio" thanks to the
+  opt-in `selfBrand` param in `scripts/lib/studioImport.mjs`. Applied 1 Nov 2026: Girlfriend tag, Sandra Sweet, Gabbie Carter,
+  Antonella Lopez, Lexi Luna, Bad MILFs tag and a small uploader profile, plus Tushy's channel (0 at the normal 20-minute/
+  no-blowjob bar across its whole ~27-video catalog; 14 added with `--allow-blowjob`, owner's say-so given). Vixen and Nubile
+  Films were revisited the same day with `--allow-blowjob`: the pool had shrunk to 2 and 1 respectively since 20 Oct (most of
+  the rest now collide with titles already on the site, or are too short).
 
 ```
 src/
