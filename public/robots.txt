@@ -2,8 +2,11 @@ User-agent: *
 Disallow: /admin/
 Disallow: /search
 # Search results and sort variants are not for the index (they are also noindex).
-Disallow: /*?q=
-Disallow: /*&q=
+# Scoped to /movies, not /*: a bare "&q=" also matches the Image CDN's own quality
+# parameter (/.netlify/images?...&fm=webp&q=75, see src/lib/poster.js), which blocked
+# Googlebot from every poster image site-wide until this was narrowed (GSC, 7 Nov 2026).
+Disallow: /movies?q=
+Disallow: /movies?*&q=
 Disallow: /*?sort=
 Disallow: /*&sort=
 Allow: /
