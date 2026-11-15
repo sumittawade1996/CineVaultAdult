@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { usePreload } from '../lib/preload'
@@ -8,6 +8,7 @@ import { breadcrumbJsonLd } from '../lib/breadcrumbs'
 import AdSlot from '../components/AdSlot'
 import { FALLBACK_SITE_URL, SITE_NAME } from '../lib/siteConfig'
 import { formatArticleDate, isUpdated } from '../lib/articleDates'
+import { cleanArticleHtml } from '../lib/articleHtml'
 
 export default function ArticleDetail() {
   const { slug } = useParams()
@@ -15,6 +16,8 @@ export default function ArticleDetail() {
   const [article, setArticle] = useState(pre?.article ?? null)
   const [notFound, setNotFound] = useState(false)
   const silentRefresh = useRef(!!pre)
+  // the body is HTML written in the admin; cleaned again here (src/lib/articleHtml.js)
+  const bodyHtml = useMemo(() => cleanArticleHtml(article?.content), [article?.content])
 
   useEffect(() => {
     let cancelled = false
@@ -102,10 +105,7 @@ export default function ArticleDetail() {
           />
         )}
         <AdSlot slot="midArticle" />
-        <div
-          style={{ color: 'var(--text)', lineHeight: 1.8, fontSize: 16 }}
-          dangerouslySetInnerHTML={{ __html: article.content || '' }}
-        />
+        <div className="article-body" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
         <AdSlot slot="inArticle" />
       </div>
     </>

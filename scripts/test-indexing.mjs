@@ -13,6 +13,8 @@ const cases = [
   ['tags', 'pornstar', 302, false, 'attribute tag'],
   ['tags', 'web-series', 58, false, 'attribute tag (plan T10)'],
   ['tags', 'brazzers', 33, false, 'studio label tag duplicates the channel page'],
+  ['tags', 'bangbros', 25, false, 'studio with its own channel page (added 2026-11-11)'],
+  ['tags', 'adult-time', 23, false, 'studio with its own channel page'],
   ['actors', 'lena-paul', 22, true, 'performer with enough titles'],
   ['actors', 'peta-jensen', 2, false, 'performers need 5 titles'],
   ['actors', 'x', 5, true, '5 is enough'],

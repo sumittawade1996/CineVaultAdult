@@ -4,32 +4,51 @@ import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { checkContent, describe } from '../lib/contentRules'
 import Seo from '../components/Seo'
+import { PAGE_COPY_DEFAULTS, PAGE_COPY_PATHS } from '../lib/pageCopy'
 
 // "Site content": the hand-written text that is not a movie or an article. One screen for the channel
 // intros, performer bios, category pages and footer partners, so none of it needs SQL any more.
 // Writes go through the admin policies (migrations 009, 011 and 014); a visitor cannot write.
 const SECTIONS = {
   channel: {
-    label: 'Channel intros', table: 'channel_descriptions', key: 'slug', select: 'slug,description', pageBase: '/channel/',
-    help: 'Shown at the top of a channel page. Describe what the channel really holds (runtime range, common tags, how it plays). Leave out exact counts: they go stale.',
-    fields: [{ name: 'description', label: 'Intro', type: 'textarea', rows: 7, max: 700 }],
+    label: 'Channel intros', table: 'channel_descriptions', key: 'slug', select: 'slug,description,seo_title,seo_description', pageBase: '/channel/',
+    help: 'Shown at the top of a channel page. Describe what the channel really holds (runtime range, common tags, how it plays). Leave out exact counts: they go stale. Link other VEXN pages as [words](/category/milf) or [Angela White](/actor/angela-white); a blank line starts a new paragraph (the first shows above the videos, the rest below them).',
+    fields: [
+      { name: 'seo_title', label: 'Search title (optional; empty = "Free <name> Porn Videos and Full Scenes")', type: 'text', min: 30, max: 53 },
+      { name: 'seo_description', label: 'Search description (optional, plain text, no links; empty = the first 160 characters of the intro)', type: 'textarea', rows: 3, min: 140, max: 160 },
+      { name: 'description', label: 'Intro', type: 'textarea', rows: 12, max: 1800 },
+    ],
   },
   performer: {
-    label: 'Performer bios', table: 'performer_descriptions', key: 'slug', select: 'slug,description', pageBase: '/actor/',
-    help: 'Shown at the top of a performer page. Use only what the catalogue shows (titles, channels, co-stars, runtimes); no personal claims.',
-    fields: [{ name: 'description', label: 'Bio', type: 'textarea', rows: 7, max: 700 }],
+    label: 'Performer bios', table: 'performer_descriptions', key: 'slug', select: 'slug,description,seo_title,seo_description', pageBase: '/actor/',
+    help: 'Shown at the top of a performer page. Use only what the catalogue shows (titles, channels, co-stars, runtimes); no personal claims. Link other VEXN pages as [words](/category/milf) or [Angela White](/actor/angela-white); a blank line starts a new paragraph (the first shows above the videos, the rest below them).',
+    fields: [
+      { name: 'seo_title', label: 'Search title (optional; empty = "Free <name> Porn Videos and Scenes")', type: 'text', min: 30, max: 53 },
+      { name: 'seo_description', label: 'Search description (optional, plain text, no links; empty = the first 160 characters of the bio)', type: 'textarea', rows: 3, min: 140, max: 160 },
+      { name: 'description', label: 'Bio', type: 'textarea', rows: 12, max: 1800 },
+    ],
   },
   category: {
     label: 'Category pages', table: 'category_descriptions', key: 'slug', select: 'slug,title,intro,seo_title,seo_description,is_indexable', pageBase: '/category/',
-    help: 'Heading, intro and search wording of a category page. The FAQ of a category is not edited here.',
+    help: 'Heading, intro and search wording of a category page. The FAQ of a category is not edited here. The intro can link other VEXN pages as [words](/channel/brazzers); a blank line starts a new paragraph.',
     fields: [
       { name: 'title', label: 'Heading (H1)', type: 'text', max: 80 },
-      { name: 'intro', label: 'Intro', type: 'textarea', rows: 7, max: 900 },
+      { name: 'intro', label: 'Intro', type: 'textarea', rows: 12, max: 1800 },
       { name: 'seo_title', label: 'Search title', type: 'text', min: 30, max: 60 },
       { name: 'seo_description', label: 'Search description', type: 'textarea', rows: 3, min: 140, max: 160 },
       { name: 'is_indexable', label: 'Let search engines index this page', type: 'checkbox' },
     ],
     defaults: { is_indexable: true },
+  },
+  page: {
+    label: 'Site pages', table: 'page_copy', key: 'slug', select: 'slug,heading,seo_title,seo_description,intro',
+    help: 'The home page and the /categories, /channels and /actors lists. An empty field keeps the built-in wording. The home search title is used as it is; the list pages get " | VEXN" added. The intro can link other VEXN pages as [words](/category/milf).',
+    fields: [
+      { name: 'heading', label: 'Heading (H1)', type: 'text', max: 80 },
+      { name: 'seo_title', label: 'Search title', type: 'text', min: 30, max: 60 },
+      { name: 'seo_description', label: 'Search description', type: 'textarea', rows: 3, min: 140, max: 160 },
+      { name: 'intro', label: 'Intro (under the heading)', type: 'textarea', rows: 10, max: 1800 },
+    ],
   },
   partner: {
     label: 'Partners', table: 'footer_partners', key: 'id', select: 'id,name,url,label,description,details,rel,is_active,sort_order',
@@ -47,7 +66,8 @@ const SECTIONS = {
     defaults: { rel: 'sponsored noopener', sort_order: 100, is_active: true },
   },
 }
-const TEXT_SECTIONS = new Set(['channel', 'performer', 'category'])
+const TEXT_SECTIONS = new Set(['channel', 'performer', 'category', 'page'])
+const PAGE_LABELS = { home: 'Home page', categories: 'Categories list', channels: 'Channels list', actors: 'Actors list' }
 
 const blank = (section) => {
   const s = SECTIONS[section]
@@ -105,6 +125,8 @@ export default function AdminContent() {
   // the list on the left: [{ key, label, done }]
   const entries = useMemo(() => {
     if (section === 'partner') return rows.map((r) => ({ key: r.id, label: r.is_active ? r.name : `${r.name} (paused)`, done: true }))
+    // the four fixed pages; one without a row shows its built-in wording
+    if (section === 'page') return Object.keys(PAGE_COPY_DEFAULTS).map((key) => ({ key, label: PAGE_LABELS[key] || key, done: rows.some((r) => r.slug === key) }))
     const map = new Map(rows.map((r) => [r.slug, { key: r.slug, label: r.slug, done: true }]))
     if (section === 'channel') {
       // every channel in use, with its proper name; the ones without text yet are marked
@@ -118,7 +140,7 @@ export default function AdminContent() {
     setStatus(null)
     setSelected(key)
     const row = rows.find((r) => r[s.key] === key)
-    setForm(row ? fromRow(section, row) : blank(section))
+    setForm(row ? fromRow(section, row) : section === 'page' ? fromRow(section, PAGE_COPY_DEFAULTS[key] || {}) : blank(section))
   }
   function addByName(e) {
     e.preventDefault()
@@ -166,7 +188,7 @@ export default function AdminContent() {
   const title = section === 'partner' ? form.name : selected
   return (
     <>
-      <Seo title="Site content" description="Admin: edit channel intros, performer bios, category pages and partners." noindex />
+      <Seo title="Site content" description="Admin: edit channel intros, performer bios, category pages, site pages and partners." noindex />
       <div className="container" style={{ padding: '48px 24px' }}>
         <div className="section-head"><h2>Site content</h2></div>
         <div className="admin-tabs" role="tablist">
@@ -183,12 +205,12 @@ export default function AdminContent() {
               {section === 'partner' && <button type="button" className={selected === '__new' ? 'active' : ''} onClick={() => pick('__new')}>+ New partner</button>}
               {shown.map((e) => (
                 <button type="button" key={e.key} className={selected === e.key ? 'active' : ''} onClick={() => pick(e.key)}>
-                  {e.label}{!e.done && <span className="hint"> · no text yet</span>}
+                  {e.label}{!e.done && <span className="hint">{section === 'page' ? ' · built-in wording' : ' · no text yet'}</span>}
                 </button>
               ))}
               {shown.length === 0 && <p className="hint">Nothing matches.</p>}
             </div>
-            {section !== 'partner' && (
+            {section !== 'partner' && section !== 'page' && (
               <form onSubmit={addByName} className="admin-content-add">
                 <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={section === 'channel' ? 'Channel name' : section === 'performer' ? 'Performer name' : 'Category name'} aria-label="Add by name" />
                 <button className="btn btn-outline btn-sm" type="submit">Add</button>
@@ -228,6 +250,7 @@ export default function AdminContent() {
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                   <button className="btn" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
                   {s.pageBase && selected !== '__new' && <Link to={`${s.pageBase}${selected}`} style={{ color: 'var(--gold)' }}>View the page →</Link>}
+                  {section === 'page' && PAGE_COPY_PATHS[selected] && <Link to={PAGE_COPY_PATHS[selected]} style={{ color: 'var(--gold)' }}>View the page →</Link>}
                 </div>
               </form>
             )}

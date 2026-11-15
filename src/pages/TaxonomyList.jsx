@@ -4,14 +4,20 @@ import { supabase } from '../lib/supabase'
 import { buildTaxonomy, buildSingleTaxonomy } from '../lib/taxonomy'
 import { fetchAll } from '../lib/fetchAll'
 import { usePreload } from '../lib/preload'
+import { collectionJsonLd } from '../lib/collectionJsonLd'
+import { introParagraphs } from '../lib/introLinks'
+import IntroText from '../components/IntroText'
+import { usePageCopy } from '../lib/usePageCopy'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 
 const TILE_COUNT = 20
 
-// `title` is the visible heading; `seoTitle` (optional) is the longer search-result title.
-export default function TaxonomyList({ field, single, title, seoTitle, basePath, description, withImages }) {
+// `copyKey` names the page's wording in page_copy (src/lib/pageCopy.js): its heading, search title, search description
+// and intro, edited in Admin > Site content > Site pages. The intro may link other pages as [words](/category/milf).
+export default function TaxonomyList({ field, single, copyKey, basePath, withImages }) {
   const pre = usePreload()
+  const { heading: title, seo_title: seoTitle, seo_description: description, intro } = usePageCopy(copyKey, pre?.pageCopy)
   const [items, setItems] = useState(pre?.items ?? [])
   const [loading, setLoading] = useState(!pre)
 
@@ -45,7 +51,11 @@ export default function TaxonomyList({ field, single, title, seoTitle, basePath,
 
   return (
     <>
-      <Seo title={seoTitle || title} description={description} />
+      <Seo
+        title={seoTitle || title}
+        description={description}
+        jsonLd={items.length ? collectionJsonLd({ path: basePath === '/actor' ? '/actors' : basePath === '/category' ? '/categories' : '/channels', name: seoTitle || title, description, items: items.map((item) => ({ to: `${basePath}/${item.slug}`, name: item.name })), total: items.length }) : undefined}
+      />
       <div className="container">
         <div className="page-head">
           <div>
@@ -53,6 +63,7 @@ export default function TaxonomyList({ field, single, title, seoTitle, basePath,
             {!loading && <p className="page-sub">{items.length.toLocaleString()} {items.length === 1 ? 'entry' : 'entries'}</p>}
           </div>
         </div>
+        {intro && introParagraphs(intro).map((p) => <IntroText key={p} className="taxonomy-intro" text={p} />)}
         <AdSlot slot="listingTop" />
         {loading ? (
           <div className="taxonomy-grid" aria-hidden="true">
@@ -67,6 +78,7 @@ export default function TaxonomyList({ field, single, title, seoTitle, basePath,
           </div>
         ) : (
           <>
+            {tiles.length > 0 && <h2 className="grid-heading">Most popular {title.toLowerCase()}</h2>}
             {tiles.length > 0 && (
               <div className="taxonomy-tile-grid">
                 {tiles.map((item) => (
@@ -80,6 +92,7 @@ export default function TaxonomyList({ field, single, title, seoTitle, basePath,
                 ))}
               </div>
             )}
+            {chips.length > 0 && <h2 className="grid-heading">{tiles.length ? `More ${title.toLowerCase()}` : `All ${title.toLowerCase()}`}</h2>}
             {chips.length > 0 && (
               <div className="taxonomy-grid">
                 {chips.map((item) => (

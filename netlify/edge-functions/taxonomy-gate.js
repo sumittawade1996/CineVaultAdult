@@ -8,10 +8,11 @@
 //   - fallback shell and the slug exists            -> served as before (a page added since the last build)
 //   - fallback shell and the slug does not exist    -> 404 with the app shell and `X-Robots-Tag: noindex`
 //   - a path with extra segments (/actor/a/b)       -> 404
+//   - prerendered page asked for with ?page=2 and on -> its canonical/robots tags rewritten for that page (pagedCopy)
 //
 // Fail-open: if Supabase cannot be reached the page is served exactly as before. Redirects from
 // netlify.toml still win, because context.next() answers them (301) before this function looks at the body.
-import { statusPage, supabaseGet } from './lib/gate-common.js'
+import { pagedCopy, statusPage, supabaseGet, withBody } from './lib/gate-common.js'
 
 // route prefix -> how to ask Supabase whether the slug has anything on it
 const LOOKUPS = {
@@ -51,7 +52,10 @@ export default async (request, context) => {
 
   const body = await response.text()
   const keep = () => new Response(body, { status: response.status, headers: response.headers })
-  if (body.includes('__VEXN_PRELOAD__')) return keep() // prerendered, so the slug existed at build time
+  if (body.includes('__VEXN_PRELOAD__')) { // prerendered, so the slug existed at build time
+    const paged = pagedCopy(body, url)
+    return paged ? withBody(response, paged) : keep()
+  }
 
   if (parts.length !== 2) return statusPage(request, 404)
   let slug = parts[1]

@@ -28,3 +28,12 @@ export function analyzeSearch(search = '') {
   const qs = new URLSearchParams([...kept.entries()].sort((a, b) => a[0].localeCompare(b[0]))).toString()
   return { search: qs ? `?${qs}` : '', variant }
 }
+
+// The address of page n with the rest of the query kept; page 1 has no parameter (the `page` rule above).
+export function pageHref(pathname, search, n) {
+  const params = new URLSearchParams(search)
+  if (n > 1) params.set('page', String(n))
+  else params.delete('page')
+  const qs = params.toString()
+  return qs ? `${pathname}?${qs}` : pathname
+}

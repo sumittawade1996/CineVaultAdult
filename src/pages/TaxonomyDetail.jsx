@@ -7,6 +7,8 @@ import { fetchAll } from '../lib/fetchAll'
 // (plan T10); scripts/generate-sitemap.mjs applies the same rules.
 import { isIndexableTaxonomy } from '../lib/indexing'
 import { clipText } from '../lib/seoText'
+import { introParagraphs, plainIntro } from '../lib/introLinks'
+import { localCopy } from '../lib/localCopy'
 import { TAXONOMY_FIELDS } from '../lib/movieFields'
 import { pickRail, summarizeMatches } from '../lib/taxonomyFacts'
 import { getPosterUrl } from '../lib/poster'
@@ -18,7 +20,9 @@ import MovieCard from '../components/MovieCard'
 import MovieGrid from '../components/MovieGrid'
 import Seo from '../components/Seo'
 import Breadcrumbs from '../components/Breadcrumbs'
+import IntroText from '../components/IntroText'
 import { breadcrumbJsonLd } from '../lib/breadcrumbs'
+import { collectionJsonLd } from '../lib/collectionJsonLd'
 import Pagination from '../components/Pagination'
 import CardSkeletonGrid from '../components/CardSkeletonGrid'
 
@@ -50,6 +54,8 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
   const [allMatches, setAllMatches] = useState(pre?.allMatches ?? [])
   const [name, setName] = useState(pre?.name ?? '')
   const [bio, setBio] = useState(pre?.bio ?? null)
+  const [bioTitle, setBioTitle] = useState(pre?.bioTitle ?? null) // the optional search title of a channel or performer
+  const [bioSeoDescription, setBioSeoDescription] = useState(pre?.bioSeoDescription ?? null) // and its optional search description
   const [catDesc, setCatDesc] = useState(pre?.catDesc ?? null)
   const [loading, setLoading] = useState(!pre)
   const silentRefresh = useRef(!!pre)
@@ -73,18 +79,22 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
       const [{ data }, bioRes, catRes] = await Promise.all([
         fetchAll(buildQuery),
         descTable
-          ? supabase.from(descTable).select('description').eq('slug', slug).maybeSingle()
+          // '*': the optional seo_title and seo_description columns (migrations 019, 022) are read without naming them
+          ? supabase.from(descTable).select('*').eq('slug', slug).maybeSingle()
           : Promise.resolve({ data: null }),
         field === 'tags'
           ? supabase.from('category_descriptions').select(CATEGORY_COLUMNS).eq('slug', slug).maybeSingle()
           : Promise.resolve({ data: null }),
       ])
+      const local = await localCopy(field, slug) // npm run dev only: unpublished copy from scripts/data
       if (cancelled) return
       const matches = data || []
       setAllMatches(matches)
       setName((matches.length > 0 && displayName(matches[0], field, slug)) || slug)
-      setBio(bioRes.data?.description || null)
-      setCatDesc(catRes.data || null)
+      setBio(local?.bio || bioRes.data?.description || null)
+      setBioTitle(local?.seoTitle || bioRes.data?.seo_title || null)
+      setBioSeoDescription(local?.seoDescription || bioRes.data?.seo_description || null)
+      setCatDesc(local?.catDesc ? { ...catRes.data, ...local.catDesc } : catRes.data || null)
       setLoading(false)
     }
     load()
@@ -132,6 +142,9 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
   const introText = allMatches.length > 0
     ? (catDesc?.intro ? `${catDesc.intro} ${dataLine}` : bio || fallbackIntro)
     : null
+  // A long intro is split at its blank lines: the first paragraph above the videos, the rest below them under
+  // "About <name>", so visitors reach the videos first and search engines still read all of it.
+  const [introLead, ...introMore] = introText ? introParagraphs(introText) : []
   // Performer and channel pages get a counted summary (runtime, channels,
   // co-stars, longest videos); categories have written intros instead.
   const facts = isCategoryPage ? null : summarizeMatches(allMatches, { ownSlug: field === 'actors' ? slug : null })
@@ -153,18 +166,21 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
   const count = allMatches.length.toLocaleString()
   const tagList = relatedTags.slice(0, 3).join(', ')
   const generatedDescription = isCategoryPage
-    ? `${count} ${name} videos on VEXN${tagList ? `, often tagged ${tagList}` : ''}. Newest first, with the cast, tags and runtime on every video page.`
+    ? `Watch ${count} free ${name} videos on VEXN${tagList ? `, often tagged ${tagList}` : ''}. Newest first, with the cast, tags and runtime on every video page.`
     : field === 'actors'
-    ? `${name} in ${count} ${allMatches.length === 1 ? 'video' : 'videos'} on VEXN${tagList ? `, tagged ${tagList}` : ''}. Open a scene for the cast, tags and runtime; every video plays from its source site.`
-    : `${count} ${allMatches.length === 1 ? 'video' : 'videos'} from ${name} on VEXN${tagList ? `, tagged ${tagList}` : ''}. Newest first, with the cast, tags and runtime on every video page.`
+    ? `${name} in ${count} free ${allMatches.length === 1 ? 'video' : 'videos'} on VEXN${tagList ? `, tagged ${tagList}` : ''}. Open a scene for the cast, tags and runtime; every video plays from its source site.`
+    : `Watch ${count} free ${allMatches.length === 1 ? 'video' : 'videos'} from ${name} on VEXN${tagList ? `, tagged ${tagList}` : ''}. Newest first, with the cast, tags and runtime on every video page.`
   // A short hand-written bio (under 120 characters) is topped up with the data sentence, so the
   // description fills the space a search result gives it.
-  const bioClip = bio ? clipText(bio) : ''
+  const bioClip = bio ? clipText(plainIntro(bio)) : ''
   const topUp = `${count} ${allMatches.length === 1 ? 'video' : 'videos'} on VEXN, newest first.`
-  const seoDescription = catDesc?.seo_description || (bioClip.length >= 120 ? bioClip : bioClip ? clipText(`${bioClip} ${topUp}`) : generatedDescription)
-  // The search title names what people look for ("<name> porn videos"); the visible heading stays the name.
-  // A channel and a performer can share a name, so a channel title says so.
-  const fallbackTitle = field === 'channel' ? `${name} Porn Videos – Channel` : isCategoryPage ? `${name} Porn Videos` : `${name} Porn Videos and Scenes`
+  // the written search description wins (category_descriptions, or a channel's or performer's seo_description column,
+  // migration 022); without one, the first sentences of the intro, else the sentence built from the data
+  const seoDescription = catDesc?.seo_description || bioSeoDescription || (bioClip.length >= 120 ? bioClip : bioClip ? clipText(`${bioClip} ${topUp}`) : generatedDescription)
+  // The search title names what people look for ("free <name> porn videos"; owner decision 2026-11-11: VEXN costs
+  // nothing, so "free" is true); the visible heading stays the name. A channel and a performer can share a name
+  // (Comatozze), so the two titles end differently.
+  const fallbackTitle = field === 'channel' ? `Free ${name} Porn Videos and Full Scenes` : isCategoryPage ? `Free ${name} Porn Videos` : `Free ${name} Porn Videos and Scenes`
 
   // Home › Categories|Actors|Channels › this page
   const crumbs = [
@@ -176,10 +192,13 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
   return (
     <>
       <Seo
-        title={catDesc?.seo_title || fallbackTitle}
+        title={catDesc?.seo_title || bioTitle || fallbackTitle}
         description={seoDescription}
         noindex={page > 1 || catDesc?.is_indexable === false || !isIndexableTaxonomy(field, slug, allMatches.length)}
-        jsonLd={breadcrumbJsonLd(crumbs)}
+        jsonLd={[
+          breadcrumbJsonLd(crumbs),
+          ...(pageMovies.length ? [collectionJsonLd({ path: crumbs[crumbs.length - 1].to, name: heading, description: seoDescription, items: pageMovies.map((m) => ({ to: `/movie/${m.slug}`, name: m.title, minutes: m.runtime_minutes, thumbnail: getPosterUrl(m), uploadDate: m.created_at })), total: allMatches.length })] : []),
+        ]}
       />
       <div className="container">
         <Breadcrumbs items={crumbs} />
@@ -196,7 +215,7 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
         </div>
         <div className={`taxonomy-band${showRail ? ' taxonomy-band--rail' : ''}`}>
         <div className="taxonomy-band-main">
-        {!loading && introText && <p className="taxonomy-intro">{introText}</p>}
+        {!loading && introLead && <IntroText className="taxonomy-intro" text={introLead} />}
         {!loading && relatedTags.length > 0 && (
           <div className="chip-row" style={{ marginBottom: 20 }}>
             {relatedTags.map((t) => (
@@ -273,9 +292,17 @@ export default function TaxonomyDetail({ field, label, backPath, backLabel }) {
           </div>
         ) : (
           <>
-            <MovieGrid movies={pageMovies} headingLevel="h2" />
+            {/* the grid's own heading (search engines read the page as sections); the cards below it are h3 */}
+            <h2 className="grid-heading">{page > 1 ? `${name} videos, page ${page}` : `Newest ${name} videos`}</h2>
+            <MovieGrid movies={pageMovies} headingLevel="h3" />
             <Pagination page={page} totalPages={totalPages} onChange={goToPage} />
           </>
+        )}
+        {!loading && introMore.length > 0 && (
+          <section className="taxonomy-about" aria-label={`About ${name}`}>
+            <h2>About {name}</h2>
+            {introMore.map((p) => <IntroText key={p} text={p} />)}
+          </section>
         )}
         {!loading && faq.length > 0 && (
           <section className="taxonomy-faq" aria-label={`Questions about ${name}`}>

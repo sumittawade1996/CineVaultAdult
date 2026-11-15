@@ -61,7 +61,8 @@ export default function AgeGate() {
       onCancel={(e) => e.preventDefault()}
     >
       <div className="age-gate-brand" aria-hidden="true">VEX<span>N</span></div>
-      <h2 id="age-gate-title">You must be 18 or older to enter</h2>
+      {/* not a heading: this dialog is in every page's HTML and would read as the page's first section */}
+      <p id="age-gate-title" className="age-gate-title">You must be 18 or older to enter</p>
       <p>
         This website contains sexually explicit material intended only for adults who are at
         least 18 years old, or the age of majority in the jurisdiction from which you are

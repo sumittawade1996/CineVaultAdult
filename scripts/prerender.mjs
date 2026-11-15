@@ -81,15 +81,17 @@ async function main() {
 
   // The same queries the pages run in the browser, so the preloaded state
   // is what the client's own refresh would produce.
-  const [cards, fullMovies, articles, performerBios, channelBios, categoryCopy, partnerRows] = await Promise.all([
+  const [cards, fullMovies, articles, performerBios, channelBios, categoryCopy, partnerRows, pageCopyRows] = await Promise.all([
     // every movie, page by page: the database answers at most 1,000 rows per request (src/lib/fetchAll.js)
     fetchAll(() => supabase.from('movies').select(TAXONOMY_FIELDS).order('created_at', { ascending: false }).order('id')),
     fetchAll(() => supabase.from('movies').select('*').order('created_at', { ascending: false }).order('id')),
     supabase.from('articles').select('*').eq('published', true).order('created_at', { ascending: false }),
-    supabase.from('performer_descriptions').select('slug,description'),
-    supabase.from('channel_descriptions').select('slug,description'),
+    // '*': the optional seo_title and seo_description columns (migrations 019, 022) are read when they exist
+    supabase.from('performer_descriptions').select('*'),
+    supabase.from('channel_descriptions').select('*'),
     supabase.from('category_descriptions').select('slug,title,intro,seo_title,seo_description,faq,is_indexable'),
     supabase.from('footer_partners').select(PARTNER_COLUMNS).order('sort_order').order('name'),
+    supabase.from('page_copy').select('*'), // wording of home and the three lists (src/lib/pageCopy.js); missing table = defaults
   ])
   for (const r of [cards, fullMovies, articles]) if (r.error) throw new Error(`Supabase: ${r.error.message}`)
   // Hand-written copy is optional: a missing table (older database) just
@@ -99,9 +101,19 @@ async function main() {
     actors: bySlug(performerBios, (row) => row.description),
     channel: bySlug(channelBios, (row) => row.description),
   }
+  const bioTitles = {
+    actors: bySlug(performerBios, (row) => row.seo_title || null),
+    channel: bySlug(channelBios, (row) => row.seo_title || null),
+  }
+  // the optional search description (migration 022); '*' above reads it once the column exists
+  const bioSeoDescriptions = {
+    actors: bySlug(performerBios, (row) => row.seo_description || null),
+    channel: bySlug(channelBios, (row) => row.seo_description || null),
+  }
   const categoryRows = bySlug(categoryCopy, (row) => row)
   // The footer's partner list is part of every page (a failed read just means none).
   const partners = partnerRows.error ? [] : partnerRows.data || []
+  const pageCopy = bySlug(pageCopyRows, (row) => row)
   const cardRows = cards.data || []
   const movieRows = fullMovies.data || []
   const articleRows = articles.data || []
@@ -110,13 +122,19 @@ async function main() {
   // pagination need them). Drawing a card needs neither the uuid (the grid keys on the slug) nor the
   // creation time (the list is already in order), and the uuid does not compress, so both are left
   // out; the trailer URL is only a fallback for a missing poster.
-  const slimMatch = ({ id, created_at, ...m }) => (m.poster_url ? (({ trailer_url, ...rest }) => rest)(m) : m)
+  // The first page's videos keep their date: the page lists them in its schema as VideoObjects (src/lib/collectionJsonLd.js).
+  const SCHEMA_ITEMS = 20 // keep in step with PAGE_SIZE in src/pages/TaxonomyDetail.jsx
+  const slimMatch = ({ id, created_at, ...m }, i) => {
+    const card = m.poster_url ? (({ trailer_url, ...rest }) => rest)(m) : m
+    return i < SCHEMA_ITEMS ? { ...card, created_at } : card
+  }
 
   const routes = []
   routes.push(['/', {
     featured: cardRows.filter((m) => m.featured).slice(0, 6).map(stripActors),
     latest: cardRows.slice(0, 12).map(stripActors),
     articles: articleRows.slice(0, 3).map(({ id, slug, title, excerpt, cover_image_url }) => ({ id, slug, title, excerpt, cover_image_url })),
+    pageCopy: pageCopy.get('home') ?? null,
   }])
   routes.push(['/movies', { movies: cardRows.slice(0, MOVIES_PAGE_SIZE).map(stripActors), total: cardRows.length }])
   // "New" pages: the latest additions and one archive per ISO week.
@@ -139,14 +157,14 @@ async function main() {
     { field: 'channel', listPath: '/channels', basePath: '/channel', items: buildSingleTaxonomy(cardRows, 'channel') },
   ]
   for (const { field, listPath, basePath, items } of taxonomies) {
-    routes.push([listPath, { items }])
+    routes.push([listPath, { items, pageCopy: pageCopy.get(listPath.slice(1)) ?? null }])
     for (const item of items) {
       const allMatches = cardRows.filter((m) => matchesSlug(m, field, item.slug))
       if (allMatches.length === 0) continue
       const name = displayName(allMatches[0], field, item.slug) || item.slug
       const extra = field === 'tags'
         ? { catDesc: categoryRows.get(item.slug) ?? null }
-        : { bio: bios[field]?.get(item.slug) ?? null }
+        : { bio: bios[field]?.get(item.slug) ?? null, bioTitle: bioTitles[field]?.get(item.slug) ?? null, bioSeoDescription: bioSeoDescriptions[field]?.get(item.slug) ?? null }
       routes.push([`${basePath}/${item.slug}`, { allMatches: allMatches.map(slimMatch), name, ...extra }])
     }
   }

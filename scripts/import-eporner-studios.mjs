@@ -14,6 +14,7 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { STUDIOS, buildSeoDescription, buildSeoTitleUnique, buildSlug, castFromTitle, cleanCast, buildTitle, excludeReason, mapTags, mentionsBlowjob, posterFrom, sceneTitle } from './lib/studioImport.mjs'
 import { draftDescription } from './lib/movieCopy.mjs'
+import { parseListPage } from './lib/linkImport.mjs'
 import { checkContent } from '../src/lib/contentRules.js'
 import { slugify } from '../src/lib/slugify.js'
 
@@ -101,12 +102,12 @@ async function apiId(code) {
   }
   return cache.id[code]
 }
-const parseListing = (html) => [...html.matchAll(/<div class="mb"[^>]*data-id="\d+"[\s\S]*?href="\/video-([A-Za-z0-9]+)\/[^"]*"[\s\S]*?class="mbtim"[^>]*>([^<]+)</g)]
-  .map((m) => { const p = m[2].split(':').map(Number); return { code: m[1], sec: p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1] } })
+// both "mb" and "mb hdy" (HD) items of the list's own block (until 13 Nov 2026 the HD ones were skipped)
+const parseListing = (html) => parseListPage(html).items
 async function channelLongest(slug) {
   const found = []
   for (let page = 1; page <= 12; page++) {
-    const key = `${slug}|longest|${page}`
+    const key = `v2|${slug}|longest|${page}`
     if (!cache.listing[key]) {
       const { data } = await http(`https://www.eporner.com/channel/${slug}/longest/${page > 1 ? page + '/' : ''}`)
       cache.listing[key] = data ? parseListing(data) : []

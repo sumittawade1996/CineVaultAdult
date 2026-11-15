@@ -1,4 +1,6 @@
 import TaxonomyList from './TaxonomyList'
+
+// The heading, search wording and intro are in the database (Admin > Site content > Site pages; src/lib/pageCopy.js).
 export default function Categories() {
-  return <TaxonomyList field="tags" title="Categories" seoTitle="Porn Categories – Browse Videos by Type" basePath="/category" description="Browse VEXN videos by category: Indian and Desi, MILF, lesbian, massage, big tits, amateur and more. Pick a category to see its newest videos first." withImages />
+  return <TaxonomyList field="tags" copyKey="categories" basePath="/category" withImages />
 }

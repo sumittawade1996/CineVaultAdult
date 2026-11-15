@@ -4,7 +4,8 @@
 // building logic is identical.
 //
 //   node scripts/import-eporner-source.mjs --kind=tag --slug=girlfriend --sort=top-monthly --label="Girlfriend" --tags="Girlfriend,Big Tits" --min=21 --per=30
-//   node scripts/import-eporner-source.mjs --kind=pornstar --slug=sandra-sweet --label="Sandra Sweet" --tags="Sandra Sweet,Big Tits" --per=20
+//   node scripts/import-eporner-source.mjs --kind=pornstar --slug=sandra-sweet --label="Sandra Sweet" --per=20
+//   node scripts/import-eporner-source.mjs --kind=playlist --slug=PRMITTER42/playlist/LiSIuWvOZUl/Beautiful-Boobs --per=50
 //   node scripts/import-eporner-source.mjs --kind=channel --slug=tushy --sort=longest --label="Tushy" --tags="Tushy,Big Tits" --per=20
 //   --sort may be omitted for a plain listing page (e.g. /pornstar/<slug>/ with no ranking segment).
 //
@@ -25,12 +26,16 @@ import { checkContent } from '../src/lib/contentRules.js'
 import { slugify } from '../src/lib/slugify.js'
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')).map(([k, v]) => [k, v ?? true]))
-const KIND = String(args.kind || 'tag') // tag | pornstar | channel | profile
+const KIND = String(args.kind || 'tag') // tag | pornstar | channel | profile | playlist
 const SLUG = String(args.slug || '')
 const SORTS = String(args.sort || '').split(',').map((s) => s.trim()).filter(Boolean)
 if (!SORTS.length) SORTS.push('') // '' = plain listing page, no ranking segment
 const LABEL = String(args.label || SLUG.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' '))
-const BASE_TAGS = String(args.tags || LABEL).split(',').map((s) => s.trim()).filter(Boolean)
+// a performer is credited in `actors`, never added as a tag (that made a category page of a person); a playlist's
+// name is someone's label for their list, not a category either
+const BASE_TAGS = String(args.tags || (KIND === 'pornstar' || KIND === 'playlist' ? '' : LABEL)).split(',').map((s) => s.trim()).filter(Boolean)
+// listings without a label of their own: the studio, else the video's first category, closes the search title
+const LABELLESS = KIND === 'pornstar' || KIND === 'playlist'
 const PER = Number(args.per || 30)
 const MIN = Number(args.min || 20)
 const MAX = Number(args.max || 240)
@@ -42,7 +47,7 @@ const tag = tagBrand(LABEL)
 // a channel's own name is expected in its own videos' titles; don't flag that as "names another studio"
 const selfBrand = KIND === 'channel' ? new RegExp(`\\b${LABEL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i') : null
 const day = new Date().toISOString().slice(0, 10)
-const OUT = args.out || join(homedir(), 'Downloads', `vexn_import_${day}_${KIND}-${SLUG}${HELD ? '_blowjob-held' : ''}`)
+const OUT = args.out || join(homedir(), 'Downloads', `vexn_import_${day}_${KIND}-${SLUG.replace(/[^A-Za-z0-9-]+/g, '-')}${HELD ? '_blowjob-held' : ''}`)
 mkdirSync(OUT, { recursive: true })
 
 // ---- environment, cache, polite HTTP ------------------------------------------------------------
@@ -84,7 +89,10 @@ async function sbGet(path) {
   }
   return rows
 }
-const movies = await sbGet('movies?select=slug,trailer_url,tags,seo_title,seo_description,title&order=slug')
+const movies = await sbGet('movies?select=slug,trailer_url,tags,seo_title,seo_description,title,channel&order=slug')
+// studio channels the site already has: a performer's video from one of them goes into that channel, not VEXN
+const siteChannels = new Map(movies.filter((m) => m.channel && m.channel !== 'VEXN').map((m) => [slugify(m.channel), m.channel]))
+const siteChannelFor = (epornerChannel) => (epornerChannel ? siteChannels.get(slugify(epornerChannel.name)) || siteChannels.get(epornerChannel.slug) || null : null)
 const removed = new Set((await sbGet('removed_movies?select=slug&order=slug')).map((r) => r.slug))
 const haveCodes = new Set(movies.map((m) => (m.trailer_url || '').match(/embed\/([A-Za-z0-9]+)/)?.[1]).filter(Boolean))
 const haveSlugs = new Set(movies.map((m) => m.slug))
@@ -97,9 +105,12 @@ const freeAllowed = new Map([...tagUse].filter(([, e]) => e.n >= 3).map(([s, e])
 console.log(`site: ${movies.length} movies, ${haveCodes.size} Eporner codes, ${removed.size} removed addresses, ${freeAllowed.size} reusable free tags`)
 
 // ---- Eporner readers ----------------------------------------------------------------------------
-const parseListing = (html) => [...html.matchAll(/<div class="mb"[^>]*data-id="\d+"[\s\S]*?href="\/video-([A-Za-z0-9]+)\/[^"]*"[\s\S]*?class="mbtim"[^>]*>([^<]+)</g)]
-  .map((m) => { const p = m[2].split(':').map(Number); return { code: m[1], sec: p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1] } })
+// Every list kind (tag, pornstar, channel, profile uploads, playlist) is read by the link tool's reader: only the
+// list's own block, both "mb" and "mb hdy" (HD) items. Until 13 Nov 2026 this importer matched class="mb" only and so
+// skipped every HD video of a tag, pornstar or channel list.
+import { parseListPage } from './lib/linkImport.mjs'
 function listingUrl(sort, page) {
+  if (KIND === 'playlist') return `https://www.eporner.com/profile/${SLUG}/${page > 1 ? `${page}/` : ''}`
   // a profile's uploads page the page number BEFORE the sort segment (.../uploaded-videos/2/most-viewed/),
   // the reverse of tag/pornstar/channel listings (.../tag/x/most-viewed/2/) - confirmed via its own <link rel=next>.
   if (KIND === 'profile') {
@@ -114,10 +125,10 @@ function listingUrl(sort, page) {
   return parts.join('')
 }
 async function listingPage(sort, page) {
-  const key = `${KIND}|${SLUG}|${sort}|${page}`
+  const key = `v2|${KIND}|${SLUG}|${sort}|${page}` // v2: lists read with the HD items too
   if (!cache.listing[key]) {
     const { data } = await http(listingUrl(sort, page))
-    cache.listing[key] = data ? parseListing(data) : []
+    cache.listing[key] = data ? parseListPage(data).items : []
     saveCache()
   }
   return cache.listing[key]
@@ -131,11 +142,12 @@ async function apiId(code) {
   return cache.id[code]
 }
 async function watchPage(code) {
-  if (!cache.watch[code]) {
+  if (!cache.watch[code] || !('channel' in cache.watch[code])) { // older cache entries did not record the channel
     const { status, data } = await http(`https://www.eporner.com/video-${code}/`)
+    const ch = data && data.match(/<li class="vit-channel"><a href="\/channel\/([^"]+)\/" title="Channel">([^<]+)<\/a>/)
     cache.watch[code] = data
-      ? { status, cast: [...new Set([...data.matchAll(/<li class="vit-pornstar[^"]*"><a href="\/pornstar\/[^"]+" title="([^"(]+?) \((?:Female|Male)\)"/g)].map((m) => m[1].trim()))] }
-      : { status, dead: true }
+      ? { status, cast: [...new Set([...data.matchAll(/<li class="vit-pornstar[^"]*"><a href="\/pornstar\/[^"]+" title="([^"(]+?) \((?:Female|Male)\)"/g)].map((m) => m[1].trim()))], channel: ch ? { slug: ch[1], name: ch[2].trim() } : null }
+      : { status, dead: true, channel: null }
     saveCache()
   }
   return cache.watch[code]
@@ -174,12 +186,23 @@ rankings: for (const sort of SORTS) {
       const reject = (reason) => note(rejects, reason)
       const w = await watchPage(v.id)
       if (w.dead) { reject('video page gone'); continue }
-      const cast = cleanCast(w.cast || [], tag)
+      // a performer listing: the performer stays in the cast (cleanCast drops names that share the label's words),
+      // and a video Eporner does not credit to the performer is not theirs
+      let cast = cleanCast(w.cast || [], LABELLESS ? tagBrand('~') : tag)
+      if (KIND === 'pornstar') {
+        const own = cast.find((n) => slugify(n) === slugify(LABEL))
+        if (!own) { reject('performer not credited on the video'); continue }
+        cast = [own, ...cast.filter((n) => n !== own)]
+      }
+      const studio = LABELLESS ? siteChannelFor(w.channel) : null
       const minutes = Math.round(v.length_sec / 60)
       const tags = mapTags(v.keywords, { name: BASE_TAGS.join(', ') }, freeAllowed)
-      const tagList = tags.split(', ')
+      const tagList = tags.split(', ').filter(Boolean)
+      // a performer listing has no label of its own: the studio, else the video's first category, closes the
+      // search title and the address ("Seth Gamble – Nightshade – Brazzers"), never the performer's name twice
+      const brand = LABELLESS ? tagBrand(studio || tagList[0] || 'Porn') : tag
       const rawTitle = dropReversedNames(v.title, cast)
-      const titleArgs = { cast, rawTitle, tag }
+      const titleArgs = { cast, rawTitle, tag: brand }
       const title = buildTagTitle({ ...titleArgs, minutes })
       if (!title) { reject('no title'); continue }
       let slug = buildTagSlug(titleArgs)
@@ -189,15 +212,15 @@ rankings: for (const sort of SORTS) {
       if (removed.has(slug)) { reject('slug was removed before'); continue }
       const takenSeo = new Set([...haveSeoTitles, ...rows.map((r) => r.seo_title.toLowerCase())])
       const seoTitle = buildTagSeoTitle({ ...titleArgs, minutes, tags: tagList }, takenSeo)
-      const scene = sceneTitle(rawTitle, cast, tag)
+      const scene = sceneTitle(rawTitle, cast, brand)
       let seoDescription = ''
       for (let salt = 0; salt < 8; salt++) {
-        seoDescription = buildTagSeoDescription({ slug: salt ? `${slug}~${salt}` : slug, tag, cast, minutes, tags: tagList, scene })
+        seoDescription = buildTagSeoDescription({ slug: salt ? `${slug}~${salt}` : slug, tag: brand, cast, minutes, tags: tagList, scene })
         const key = seoDescription.toLowerCase()
         if (!haveSeoDescs.has(key) && !rows.some((r) => r.seo_description.toLowerCase() === key)) break
       }
       const description = draftDescription({ slug, title, actors: cast.join(', '), runtime_minutes: minutes, tags, channel: CHANNEL, source: 'Eporner' })
-      const keywords = [...new Set([LABEL, ...cast, ...tagList])].join(', ')
+      const keywords = [...new Set([...(KIND === 'playlist' ? [] : [LABEL]), ...cast, ...tagList])].join(', ') // a playlist's name is not a keyword
       const problems = []
       if (seoTitle.length < 30 || seoTitle.length > 53) problems.push(`seo_title ${seoTitle.length}`)
       if (seoDescription.length < 140 || seoDescription.length > 160) problems.push(`seo_description ${seoDescription.length}`)

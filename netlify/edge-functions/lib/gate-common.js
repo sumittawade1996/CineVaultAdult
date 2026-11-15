@@ -31,3 +31,23 @@ export async function statusPage(request, status) {
     },
   })
 }
+
+// A prerendered list page answers every ?page=N with the file of page 1 (the query is not part of the file name),
+// so its canonical, og:url and robots tags are page 1's until the browser runs the app. For page 2 and on they are
+// rewritten in the HTML itself, the way the app sets them (src/components/Seo.jsx, src/lib/seoUrl.js): canonical to
+// its own ?page=N, noindex,follow. Returns the new HTML, or null when there is nothing to change.
+export function pagedCopy(body, url) {
+  const n = Number.parseInt(url.searchParams.get('page') || '', 10)
+  if (!(n > 1)) return null
+  return body
+    .replace(/(<link[^>]*rel="canonical"[^>]*href=")([^"?]*)(")/, `$1$2?page=${n}$3`)
+    .replace(/(<meta[^>]*property="og:url"[^>]*content=")([^"?]*)(")/, `$1$2?page=${n}$3`)
+    .replace(/(<meta[^>]*name="robots"[^>]*content=")[^"]*(")/, '$1noindex, follow$2')
+}
+
+// The same response with another body (the length header would be wrong)
+export function withBody(response, body) {
+  const headers = new Headers(response.headers)
+  headers.delete('content-length')
+  return new Response(body, { status: response.status, headers })
+}

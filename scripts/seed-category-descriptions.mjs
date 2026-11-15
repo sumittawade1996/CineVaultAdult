@@ -6,6 +6,7 @@
 import { writeFileSync } from 'node:fs'
 import { CATEGORIES } from './data/category-descriptions.mjs'
 import { checkContent } from '../src/lib/contentRules.js'
+import { copyProblems } from './lib/copyRules.mjs'
 
 const words = (s) => s.trim().split(/\s+/).length
 const errors = []
@@ -26,6 +27,10 @@ for (const c of CATEGORIES) {
   const text = { title: c.title, description: [c.seo_description, c.intro, ...c.faq.flatMap((f) => [f.q, f.a])].join(' ') }
   const hits = checkContent(text)
   if (hits.block.length) fail(`blocked theme: ${hits.block.map((h) => h.match).join(', ')}`)
+  // links in the intro (src/lib/introLinks.js): VEXN pages only, never itself, each page once
+  for (const p of copyProblems(c.intro, { selfPath: `/category/${c.slug}`, minWords: 0, maxWords: Infinity, claims: false, counts: false })) {
+    if (!/content rules/.test(p)) fail(`intro: ${p}`) // review-level words are fine in category copy (blocked ones are checked above)
+  }
 }
 if (errors.length) {
   console.error(errors.join('\n'))

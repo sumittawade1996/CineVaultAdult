@@ -182,7 +182,8 @@ export default function Movies() {
           </div>
         ) : (
           <>
-            <MovieGrid movies={movies} headingLevel="h2" />
+            <h2 className="grid-heading">{q ? `Videos matching “${q}”` : page > 1 ? `All videos, page ${page}` : 'Newest videos'}</h2>
+            <MovieGrid movies={movies} headingLevel="h3" />
             <Pagination page={page} totalPages={totalPages} onChange={goToPage} />
           </>
         )}

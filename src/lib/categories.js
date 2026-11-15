@@ -35,6 +35,8 @@ export const LABEL_TAGS = new Set([
   'hd', '4k', '2k', '1080p', '60fps', '60-fps', 'full-hd',
   'pornstar', 'web-series', 'web-series-2024', 'web-series-2026',
   'brazzers', 'reality-kings', 'vixen', 'blacked', 'ibamovies', 'ullu',
+  // studios and apps that have a channel page: as a tag their page would only repeat the channel's
+  'bangbros', 'adult-time', 'tushy', 'nubile-films', 'fliz-movies', 'rabbit-movies', 'new-sensations', 'naughty-america',
   'ai-generated', 'trending', 'adult', 'nude', 'nude-movies', 'semi-adult',
   'uncut', 'uncensored', 'long-feature', 'short-film', 'compilation',
 ])

@@ -5,9 +5,11 @@ import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { usePreload } from '../lib/preload'
 import MovieGrid from '../components/MovieGrid'
 import AdSlot from '../components/AdSlot'
-import Seo, { DEFAULT_TITLE } from '../components/Seo'
+import Seo from '../components/Seo'
 import CardSkeletonGrid from '../components/CardSkeletonGrid'
 import WatchShortcut from '../components/WatchShortcut'
+import IntroText from '../components/IntroText'
+import { usePageCopy } from '../lib/usePageCopy'
 import { SITE_NAME, SOCIAL_LINKS, FALLBACK_SITE_URL } from '../lib/siteConfig'
 
 const homeJsonLd = [
@@ -33,6 +35,8 @@ const homeJsonLd = [
 
 export default function Home() {
   const pre = usePreload()
+  // heading, search wording and the line under the heading: Admin > Site content > Site pages (src/lib/pageCopy.js)
+  const copy = usePageCopy('home', pre?.pageCopy)
   const [featured, setFeatured] = useState(pre?.featured ?? [])
   const [latest, setLatest] = useState(pre?.latest ?? [])
   const [articles, setArticles] = useState(pre?.articles ?? [])
@@ -59,13 +63,13 @@ export default function Home() {
   return (
     <>
       <Seo
-        rawTitle={DEFAULT_TITLE}
-        description="Adult movies provider with HD, MILF, Asian and Indian videos by category, performer and channel, plus desi, lesbian, massage and 4K. Newest first. 18+ only."
+        rawTitle={copy.seo_title}
+        description={copy.seo_description}
         jsonLd={homeJsonLd}
       />
       <div className="container home-heading">
-        <h1>Adult, HD, MILF, Asian &amp; Indian Movies Provider</h1>
-        <p className="page-sub">Top performers and the latest additions.</p>
+        <h1>{copy.heading}</h1>
+        <IntroText className="page-sub" text={copy.intro} />
         <WatchShortcut variant="hero" />
       </div>
 

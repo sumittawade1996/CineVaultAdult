@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEXN Link Tool</title>
+<style>
+  :root {
+    --bg: #0b0d10; --surface: #14171c; --surface-2: #181c22; --raised: #1f242b;
+    --line: #262b32; --line-strong: #343a43;
+    --text: #edeae3; --muted: #9aa0aa; --faint: #6f7580;
+    --accent: #e8a33d; --accent-ink: #1a1306; --accent-soft: rgba(232, 163, 61, 0.12);
+    --ok: #5fc46b; --warn: #e0b43c; --err: #e5534b;
+    --ok-soft: rgba(95, 196, 107, 0.12); --warn-soft: rgba(224, 180, 60, 0.12); --err-soft: rgba(229, 83, 75, 0.12);
+    --radius: 10px; --radius-sm: 6px;
+    --font-display: Georgia, 'Times New Roman', 'Iowan Old Style', Palatino, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--font-body); padding-bottom: 88px; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+  header.top .wrap { display: flex; align-items: baseline; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+  header.top h1 { font: 600 22px/1.2 var(--font-display); margin: 0; letter-spacing: 0.01em; }
+  header.top h1 span { color: var(--accent); }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  header.top .meta b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .intake { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; padding: 20px 0; }
+  .intake label.big { display: block; font-weight: 600; margin-bottom: 6px; }
+  .intake textarea { width: 100%; min-height: 112px; resize: vertical; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px 12px; font: 13px/1.5 var(--font-mono); }
+  .hint { color: var(--faint); font-size: 12px; margin: 6px 0 0; }
+  .opts { display: grid; gap: 10px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .opts .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .opts input[type=number] { width: 72px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 4px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+  .opts .check { display: flex; gap: 8px; align-items: flex-start; }
+  .opts .check small { display: block; color: var(--faint); }
+  .btn { border: 1px solid var(--line-strong); background: var(--raised); border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer; font-weight: 600; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+  .btn.small { padding: 4px 10px; font-size: 12px; font-weight: 500; }
+
+  .log { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 14px; margin-bottom: 18px; font-size: 13px; }
+  .log:empty { display: none; }
+  .log p { margin: 2px 0; color: var(--muted); }
+  .log p.error { color: var(--err); }
+  .log p.status { color: var(--text); }
+  .log p.status::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 8px; animation: pulse 1s infinite alternate; }
+  @keyframes pulse { from { opacity: 0.3; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .log p.status::before { animation: none; } }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 12px; cursor: pointer; color: var(--muted); font-size: 13px; }
+  .tab[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+  .tab b { font-variant-numeric: tabular-nums; margin-left: 4px; }
+  .toolbar .spacer { flex: 1; }
+
+  .cards { display: grid; gap: 14px; }
+  .card { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card.off { opacity: 0.62; }
+  .card.off:hover, .card.off:focus-within { opacity: 1; }
+  .card.bad { border-color: rgba(229, 83, 75, 0.45); }
+  .src { display: grid; gap: 8px; align-content: start; font-size: 12.5px; color: var(--muted); }
+  .thumb { aspect-ratio: 16 / 9; width: 100%; border-radius: var(--radius-sm); background: var(--surface-2); object-fit: cover; display: block; }
+  body.blur .thumb { filter: blur(14px) saturate(0.6); }
+  .src .stitle { color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
+  .src dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
+  .src dt { color: var(--faint); }
+  .src dd { margin: 0; overflow-wrap: anywhere; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 8px; font-size: 11.5px; color: var(--muted); }
+  .chip.warn { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+
+  .fields { display: grid; gap: 10px; min-width: 0; }
+  .fhead { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+  .add { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px 4px 8px; }
+  .add input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+  .card:not(.off) .add { border-color: var(--accent); background: var(--accent-soft); }
+  .state { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+  .state.ok { color: var(--ok); background: var(--ok-soft); }
+  .state.warn { color: var(--warn); background: var(--warn-soft); }
+  .state.err { color: var(--err); background: var(--err-soft); }
+  .state.fix { color: #f08a5d; background: rgba(240, 138, 93, 0.12); }
+  .problems li.fix { color: #f08a5d; }
+  .problems li.fix::before { background: #f08a5d; }
+  .problems li.hint { color: var(--muted); font-style: italic; }
+  .problems li.hint::before { background: var(--line-strong); }
+  .bar .why.soft { color: #f08a5d; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .f { display: grid; gap: 3px; min-width: 0; }
+  .f > span { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--faint); }
+  .f > span em { font-style: normal; text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .f > span em.ok { color: var(--ok); }
+  .f > span em.bad { color: var(--err); }
+  .f input, .f textarea { width: 100%; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 6px 9px; }
+  .f textarea { resize: vertical; min-height: 58px; }
+  .f textarea.long { min-height: 92px; }
+  .f .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  .slugline { display: flex; align-items: stretch; }
+  .slugline b { font: 12.5px var(--font-mono); color: var(--faint); background: var(--surface-2); border: 1px solid var(--line-strong); border-right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); padding: 6px 8px; font-weight: 400; display: flex; align-items: center; }
+  .slugline input { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .problems { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 12.5px; }
+  .problems li { padding-left: 16px; position: relative; }
+  .problems li::before { content: ''; position: absolute; left: 2px; top: 7px; width: 7px; height: 7px; border-radius: 50%; }
+  .problems li.err { color: var(--err); }
+  .problems li.err::before { background: var(--err); }
+  .problems li.warn { color: var(--warn); }
+  .problems li.warn::before { background: var(--warn); }
+
+  .opts .kw { display: grid; gap: 2px; }
+  .opts .kw small { color: var(--faint); font-size: 12px; }
+  .opts .kwbox { width: 100%; resize: vertical; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 6px 8px; font-size: 13px; }
+  .focusline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+  .focusline .f input { border-color: var(--accent-dim, #7a5a28); }
+  .score { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; border: 1px solid var(--line-strong); color: var(--muted); }
+  .score.full { color: var(--ok); border-color: rgba(95, 196, 107, 0.5); }
+  .fhead .right { display: flex; gap: 6px; align-items: center; }
+  details.seo { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+  details.seo summary { cursor: pointer; padding: 6px 10px; font-size: 12.5px; color: var(--muted); list-style-position: inside; }
+  details.seo summary b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .checklist { list-style: none; margin: 0; padding: 4px 10px 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 16px; font-size: 12.5px; }
+  .checklist li { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: baseline; }
+  .checklist li i { font-style: normal; font-weight: 700; text-align: center; }
+  .checklist li.ok i { color: var(--ok); }
+  .checklist li.no i { color: var(--err); }
+  .checklist li.no span { color: var(--text); }
+  .checklist li.ok span { color: var(--muted); }
+  .checklist small { color: var(--faint); margin-left: 4px; }
+  @media (max-width: 860px) { .checklist { grid-template-columns: 1fr; } .focusline { grid-template-columns: 1fr; } }
+
+  .empty { border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 28px; color: var(--muted); text-align: center; }
+  .empty b { color: var(--text); }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(20, 23, 28, 0.96); border-top: 1px solid var(--line-strong); backdrop-filter: blur(6px); }
+  .bar .wrap { display: flex; align-items: center; gap: 14px; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; }
+  .bar .count { font-variant-numeric: tabular-nums; }
+  .bar .count b { font-size: 18px; }
+  .bar .why { color: var(--err); font-size: 13px; }
+  .bar .spacer { flex: 1; }
+
+  dialog { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 0; }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+  dialog .dh { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  dialog h2 { font: 600 18px var(--font-display); margin: 0; flex: 1; }
+  dialog .db { padding: 14px 18px; display: grid; gap: 10px; }
+  dialog textarea { width: 100%; height: 52vh; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px; font: 12px/1.5 var(--font-mono); white-space: pre; overflow: auto; }
+  dialog .note { color: var(--muted); font-size: 13px; margin: 0; overflow-wrap: anywhere; }
+  dialog .steps { margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; }
+  dialog .note.copied { color: var(--ok); font-weight: 600; }
+  dialog .note.copied.fail { color: var(--warn); }
+  .card.flash { outline: 2px solid var(--err); outline-offset: 3px; }
+
+  @media (max-width: 860px) {
+    .intake { grid-template-columns: 1fr; }
+    .card { grid-template-columns: 1fr; }
+    .src { grid-template-columns: 140px 1fr; align-items: start; }
+    .src .thumb { grid-row: span 3; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) { .wrap { padding: 0 16px; } .src { grid-template-columns: 1fr; } .src .thumb { grid-row: auto; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>VEXN <span>link tool</span></h1>
+    <div class="meta" id="siteMeta">Reads Eporner and your site’s list of videos; writes nothing to the database.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intake">
+    <div>
+      <label class="big" for="links">Eporner links</label>
+      <textarea id="links" spellcheck="false" placeholder="https://www.eporner.com/video-…/&#10;https://www.eporner.com/profile/NAME/playlist/ID/Name/&#10;https://www.eporner.com/pornstar/lucy-li/"></textarea>
+      <p class="hint">One per line: a video, a playlist, a tag, a performer, a channel, a category, a search or an uploader. Videos already on the site are left out.</p>
+    </div>
+    <div class="opts">
+      <div class="row"><label for="pages">List pages to read</label><input type="number" id="pages" min="1" max="20" value="1"></div>
+      <div class="row"><label for="limit">At most this many videos</label><input type="number" id="limit" min="1" max="300" value="60"></div>
+      <div class="row"><label for="minMinutes">Minimum length (min)</label><input type="number" id="minMinutes" min="0" max="240" value="20"></div>
+      <label class="kw" for="extras">Extra keywords<small>Comma-separated, e.g. free HD porn, full video. Worked into each draft where they fit and listed in every card’s checklist.</small></label>
+      <textarea id="extras" class="kwbox" rows="2" spellcheck="false" placeholder="free HD porn, full video"></textarea>
+      <label class="check"><input type="checkbox" id="onlyReady"><span>Tick only ready videos<small>Off: every drafted video is ticked and goes into the SQL; problems are written above each one as CHECK notes for the second check.</small></span></label>
+      <label class="check"><input type="checkbox" id="blur"><span>Blur pictures</span></label>
+      <button class="btn primary" id="readBtn">Read links</button>
+    </div>
+  </section>
+
+  <section class="log" id="log" aria-live="polite"></section>
+
+  <section id="results" hidden>
+    <div class="toolbar">
+      <div class="tabs" role="group" aria-label="Show">
+        <button class="tab" data-filter="all" aria-pressed="true">All<b id="nAll">0</b></button>
+        <button class="tab" data-filter="ticked" aria-pressed="false">Ticked<b id="nTicked">0</b></button>
+        <button class="tab" data-filter="fix" aria-pressed="false">Needs fixing<b id="nFix">0</b></button>
+        <button class="tab" data-filter="held" aria-pressed="false">Not ticked<b id="nHeld">0</b></button>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn small" id="redraftAll">Work keywords into all cards</button>
+      <button class="btn small" id="tickReady">Tick all without problems</button>
+      <button class="btn small" id="tickAll">Tick all</button>
+      <button class="btn small" id="untickAll">Untick all</button>
+      <button class="btn small" id="clearAll">Clear list</button>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <div class="empty" id="empty"><b>Paste a link and press Read links.</b><br>Each video becomes a card with its title, address, search title and descriptions ready to edit. Tick the ones to add, then make the SQL.</div>
+</main>
+
+<div class="bar">
+  <div class="wrap">
+    <span class="count"><b id="tickCount">0</b> ticked</span>
+    <span class="why" id="why"></span>
+    <span class="spacer"></span>
+    <button class="btn primary" id="sqlBtn" disabled>Make SQL</button>
+  </div>
+</div>
+
+<dialog id="sqlDialog">
+  <div class="dh">
+    <h2 id="sqlTitle">Insert script</h2>
+    <button class="btn small primary" id="copyBtn">Copy</button>
+    <button class="btn small" id="revealBtn">Show in folder</button>
+    <button class="btn small" id="downloadBtn">Download .sql</button>
+    <button class="btn small" id="closeBtn">Close</button>
+  </div>
+  <div class="db">
+    <p class="note" id="sqlNote"></p>
+    <p class="note copied" id="copyNote" hidden></p>
+    <ul class="problems" id="sqlReport" hidden></ul>
+    <ol class="steps">
+      <li>Send it to Claude for the second check (paste it in the chat): the lines starting <code>-- CHECK</code> say what to look at.</li>
+      <li>Then open Supabase → SQL editor, paste, Run. It returns the address of each video it added.</li>
+      <li>The videos show on the site at once; their pre-rendered pages and sitemap entries come with the next deploy.</li>
+    </ol>
+    <textarea id="sqlText" readonly spellcheck="false"></textarea>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id)
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)) } catch { return null } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* private window */ } },
+  }
+  const LIMITS = { seo_title: [30, 53], seo_description: [140, 160], description: [200, 450] }
+  let rows = []
+  let filter = 'all'
+  let lastSql = null
+  let reading = false
+
+  const settings = () => ({ pages: Number($('pages').value) || 1, limit: Number($('limit').value) || 60, minMinutes: Number($('minMinutes').value), onlyReady: $('onlyReady').checked, extras: $('extras').value })
+  const save = () => store.set('vexn-link-tool', { rows, links: $('links').value, settings: settings(), blur: $('blur').checked })
+
+  // ---- log ----
+  function log(text, cls = '') {
+    const p = document.createElement('p')
+    p.textContent = text
+    if (cls) p.className = cls
+    $('log').querySelector('p.status')?.remove()
+    $('log').append(p)
+  }
+
+  // ---- read links (streamed) ----
+  async function read() {
+    const links = $('links').value.split(/\s+/).map((s) => s.trim()).filter(Boolean)
+    if (!links.length) { $('links').focus(); return }
+    reading = true
+    $('readBtn').disabled = true
+    $('readBtn').textContent = 'Reading…'
+    $('log').innerHTML = ''
+    const known = new Set(rows.map((r) => r.code))
+    let added = 0
+    try {
+      const res = await fetch('/api/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ links, ...settings() }) })
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      let buf = ''
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        let i
+        while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i)
+          buf = buf.slice(i + 1)
+          if (!line.trim()) continue
+          const msg = JSON.parse(line)
+          if (msg.type === 'status') log(msg.text, 'status')
+          else if (msg.type === 'note') log(msg.text, msg.level === 'error' ? 'error' : '')
+          else if (msg.type === 'site') siteMeta(msg)
+          else if (msg.type === 'skip') log(`Left out ${msg.code}: ${msg.reason}`, 'error')
+          else if (msg.type === 'row') {
+            if (known.has(msg.row.code)) continue
+            known.add(msg.row.code)
+            rows.push(msg.row)
+            added++
+            render(true)
+          } else if (msg.type === 'done') log(`Done: ${added} new card${added === 1 ? '' : 's'}.`)
+        }
+      }
+    } catch (err) {
+      log(`The tool stopped: ${err.message}. Is the window running "npm run link-tool" still open?`, 'error')
+    }
+    reading = false
+    $('readBtn').disabled = false
+    $('readBtn').textContent = 'Read links'
+    save()
+    recheck()
+  }
+
+  function siteMeta(msg) {
+    $('siteMeta').innerHTML = ''
+    $('siteMeta').append('Site: ', Object.assign(document.createElement('b'), { textContent: msg.count.toLocaleString() }), ' videos · read-only · nothing is written to the database')
+    const dl = $('channelList') || Object.assign(document.createElement('datalist'), { id: 'channelList' })
+    dl.innerHTML = ''
+    for (const name of msg.channels) dl.append(Object.assign(document.createElement('option'), { value: name }))
+    document.body.append(dl)
+    store.set('vexn-link-tool-channels', msg.channels)
+  }
+
+  // ---- checks ----
+  let checkTimer = null
+  function recheck(delay = 350) {
+    clearTimeout(checkTimer)
+    checkTimer = setTimeout(async () => {
+      if (!rows.length) return
+      try {
+        const res = await fetch('/api/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rows, ...settings() }) })
+        const { checks, seo } = await res.json()
+        checks.forEach((c, i) => { if (rows[i]) rows[i].check = c })
+        ;(seo || []).forEach((s, i) => { if (rows[i]) rows[i].seo = s })
+        render(true)
+        save()
+      } catch { /* the server is closed; counters still work */ }
+    }, delay)
+  }
+
+  // ---- cards ----
+  const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids.filter((k) => k != null)); return e }
+  // err: a block rule or a broken field, never in the SQL; fix: problems the person can override by ticking
+  const blocked = (r) => (r.check?.errors || []).length > 0
+  const needsFix = (r) => (r.check?.fixes || []).length > 0
+  const state = (r) => (blocked(r) ? 'err' : needsFix(r) ? 'fix' : r.check?.warnings?.length ? 'warn' : 'ok')
+  const STATE_LABEL = { ok: 'Ready', warn: 'Check the notes', fix: 'Needs fixing', err: 'Site rule – check' }
+  const shown = (r) => filter === 'all' || (filter === 'ticked' && r.include) || (filter === 'fix' && (blocked(r) || needsFix(r))) || (filter === 'held' && !r.include)
+  function problemItems(r) {
+    const items = [
+      ...(r.check?.errors || []).map((t) => el('li', { className: 'err', textContent: `Site rule: ${t}` })),
+      ...(r.check?.fixes || []).map((t) => el('li', { className: 'fix', textContent: t })),
+    ]
+    if (needsFix(r) || blocked(r)) items.push(el('li', { className: 'hint', textContent: r.include ? 'Ticked: it goes into the SQL with these notes as a CHECK line for the second check.' : 'Not ticked: tick “Add this video” to put it in the SQL with a CHECK line.' }))
+    items.push(...(r.check?.warnings || []).map((t) => el('li', { className: 'warn', textContent: t })))
+    return items
+  }
+
+  function counter(key, value) {
+    const [lo, hi] = LIMITS[key]
+    const n = value.length
+    return el('em', { className: n >= lo && n <= hi ? 'ok' : 'bad', textContent: `${n} / ${lo}–${hi}` })
+  }
+
+  function field(r, key, label, { area = false, long = false, mono = false, list = null, prefix = null } = {}) {
+    const input = area ? el('textarea', { value: r[key] ?? '', rows: long ? 4 : 2 }) : el('input', { type: 'text', value: r[key] ?? '' })
+    if (long) input.classList.add('long')
+    if (mono) input.classList.add('mono')
+    if (list) input.setAttribute('list', list)
+    input.spellcheck = !mono
+    const head = el('span', {}, label)
+    if (LIMITS[key]) head.append(counter(key, String(r[key] ?? '')))
+    input.addEventListener('input', () => {
+      r[key] = input.value
+      if (LIMITS[key]) head.lastChild.replaceWith(counter(key, input.value))
+      recheck()
+    })
+    const control = prefix ? el('div', { className: 'slugline' }, el('b', { textContent: prefix }), input) : input
+    return el('label', { className: 'f' }, head, control)
+  }
+
+  function card(r) {
+    const s = state(r)
+    const c = el('article', { className: `card${r.include ? '' : ' off'}${s === 'err' ? ' bad' : ''}` })
+    c.dataset.code = r.code
+
+    const img = el('img', { className: 'thumb', src: r.poster_url || r.poster_small || '', alt: '', loading: 'lazy' })
+    const dl = el('dl')
+    const add = (dt, dd) => { if (dd) dl.append(el('dt', { textContent: dt }), el('dd', { textContent: dd })) }
+    add('Length', `${r.runtime_minutes} min`)
+    add('Quality', r.flags?.quality ? (r.flags.quality >= 2160 ? '4K' : `${r.flags.quality}p`) : '')
+    add('Cast', (r.source_cast || []).join(', ') || 'not credited')
+    add('Studio', r.flags?.studio || '')
+    const chips = el('div', { className: 'chips' }, ...(r.source_categories || []).map((cat) => el('span', { className: `chip${/^(teens?|college|petite)$/.test(cat) || cat === 'blowjob' ? ' warn' : ''}`, textContent: cat })))
+    const src = el('div', { className: 'src' }, img,
+      el('a', { className: 'stitle', href: r.source_url, target: '_blank', rel: 'noreferrer', textContent: r.source_title || r.code }),
+      dl, chips)
+
+    const tick = el('input', { type: 'checkbox', checked: !!r.include })
+    tick.addEventListener('change', () => { r.include = tick.checked; render(true); save(); recheck() })
+    const head = el('div', { className: 'fhead' }, el('label', { className: 'add' }, tick, 'Add this video'),
+      el('span', { className: 'right' }, scoreChip(r), el('span', { className: `state ${s}`, textContent: STATE_LABEL[s] })))
+
+    const problems = el('ul', { className: 'problems' }, ...problemItems(r))
+
+    const work = el('button', { className: 'btn small', type: 'button', textContent: 'Work keywords in', title: 'Rewrite the search title, search description, page description and keywords with the focus keyword and the extra keywords' })
+    work.addEventListener('click', () => redraft([r], work))
+    const focusLine = el('div', { className: 'focusline' }, field(r, 'focus', 'Focus keyword (the phrase this video should be found by)'), work)
+
+    const fields = el('div', { className: 'fields' }, head,
+      field(r, 'title', 'Title on the page'),
+      focusLine,
+      field(r, 'slug', 'Address', { mono: true, prefix: '/movie/' }),
+      field(r, 'seo_title', 'Search title (the site adds “ | VEXN”)'),
+      field(r, 'seo_description', 'Search description', { area: true }),
+      field(r, 'description', 'Page description', { area: true, long: true }),
+      el('div', { className: 'grid2' }, field(r, 'actors', 'Performers'), field(r, 'channel', 'Channel', { list: 'channelList' })),
+      el('div', { className: 'grid2' }, field(r, 'tags', 'Tags'), field(r, 'keywords', 'Keywords')),
+      problems, checklist(r))
+    c.append(src, fields)
+    return c
+  }
+
+  // ---- SEO checklist ----
+  function scoreChip(r) {
+    const s = r.seo
+    return el('span', { className: `score${s && s.done === s.total ? ' full' : ''}`, textContent: s ? `SEO ${s.done}/${s.total}` : 'SEO …', title: 'SEO checklist items met' })
+  }
+  function checklist(r) {
+    const s = r.seo
+    const d = el('details', { className: 'seo', open: true })
+    d.append(el('summary', {}, 'SEO checklist ', el('b', { textContent: s ? `${s.done} of ${s.total}` : '…' })))
+    const list = el('ul', { className: 'checklist' })
+    for (const item of s?.items || []) {
+      list.append(el('li', { className: item.ok ? 'ok' : 'no' }, el('i', { textContent: item.ok ? '✓' : '✗', ariaLabel: item.ok ? 'done' : 'missing' }),
+        el('span', {}, item.label, item.detail ? el('small', { textContent: item.detail }) : null)))
+    }
+    d.append(list)
+    return d
+  }
+
+  // rewrite the texts of these cards with their focus keyword and the extra keywords
+  async function redraft(list, button) {
+    if (!list.length) return
+    if (button) { button.disabled = true; button.textContent = 'Writing…' }
+    try {
+      const res = await fetch('/api/redraft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rows: list, extras: $('extras').value }) })
+      const { drafts } = await res.json()
+      drafts.forEach((d, i) => Object.assign(list[i], d))
+      for (const r of list) {
+        const node = $('cards').querySelector(`[data-code="${r.code}"]`)
+        if (node) node.replaceWith(card(r))
+      }
+      save()
+      recheck(0)
+    } catch (err) {
+      log(`Could not rewrite: ${err.message}`, 'error')
+      if (button) { button.disabled = false; button.textContent = 'Work keywords in' }
+    }
+  }
+
+  // light: only the parts that depend on checks and ticks; full: every card again (after new rows or a filter change)
+  function render(light = false) {
+    $('results').hidden = !rows.length
+    $('empty').hidden = !!rows.length
+    $('nAll').textContent = rows.length
+    $('nTicked').textContent = rows.filter((r) => r.include).length
+    $('nFix').textContent = rows.filter((r) => blocked(r) || needsFix(r)).length
+    $('nHeld').textContent = rows.filter((r) => !r.include).length
+    const ticked = rows.filter((r) => r.include)
+    const noted = ticked.filter((r) => blocked(r) || needsFix(r))
+    $('tickCount').textContent = ticked.length
+    const why = noted.length ? `all go into the SQL; ${noted.length} with CHECK notes for the second check` : ''
+    if (why || !$('why').dataset.sticky) $('why').textContent = why // a Make SQL error stays until the next try
+    $('why').classList.toggle('soft', true)
+    $('sqlBtn').disabled = !ticked.length || reading
+    const box = $('cards')
+    if (light) { // update cards where they are, so a field being typed in keeps its caret
+      for (const r of rows) {
+        const old = box.querySelector(`[data-code="${r.code}"]`)
+        if (old && !shown(r)) old.remove()
+        else if (old) updateInPlace(old, r)
+        else if (shown(r)) box.append(card(r))
+      }
+      return
+    }
+    box.innerHTML = ''
+    for (const r of rows) if (shown(r)) box.append(card(r))
+  }
+  function updateInPlace(node, r) {
+    const s = state(r)
+    node.className = `card${r.include ? '' : ' off'}${s === 'err' ? ' bad' : ''}`
+    const tick = node.querySelector('.add input')
+    if (tick) tick.checked = !!r.include
+    const st = node.querySelector('.state')
+    st.className = `state ${s}`
+    st.textContent = STATE_LABEL[s]
+    const list = node.querySelector('.problems')
+    list.innerHTML = ''
+    list.append(...problemItems(r))
+    node.querySelector('.score')?.replaceWith(scoreChip(r))
+    const old = node.querySelector('details.seo')
+    if (old) { const fresh = checklist(r); fresh.open = old.open; old.replaceWith(fresh) }
+  }
+
+  // ---- SQL ----
+  async function makeSql() {
+    const ticked = rows.filter((r) => r.include)
+    $('sqlBtn').disabled = true
+    try {
+      const res = await fetch('/api/sql', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rows: ticked, links: $('links').value.split(/\s+/).filter(Boolean), ...settings() }) })
+      const data = await res.json()
+      if (!res.ok) {
+        // shown next to the button (where the person is looking) and on the first card to fix
+        const first = (data.problems || [])[0]
+        barError(first ? `${data.error} ${first.title}: ${first.errors[0]}` : (data.error || 'Could not make the SQL.'))
+        for (const p of data.problems || []) log(`${p.title}: ${p.errors.join('; ')}`, 'error')
+        recheck(0)
+        if (first) {
+          const node = $('cards').querySelector(`[data-code="${first.code}"]`)
+          if (node) { node.scrollIntoView({ behavior: 'smooth', block: 'center' }); node.classList.add('flash'); setTimeout(() => node.classList.remove('flash'), 2400) }
+        }
+        return
+      }
+      lastSql = data
+      $('sqlTitle').textContent = `Insert script · ${data.count} video${data.count === 1 ? '' : 's'}`
+      $('sqlNote').textContent = data.file ? `Saved as ${data.file}` : 'Copy it below.'
+      $('revealBtn').hidden = !data.file
+      $('copyNote').hidden = true
+      $('copyBtn').textContent = 'Copy'
+      // what went in with problems, and what was left out (block rules or broken fields)
+      const report = $('sqlReport')
+      report.innerHTML = ''
+      for (const p of data.flagged || []) report.append(el('li', { className: p.rule ? 'err' : 'fix', textContent: `CHECK ${p.title} – ${p.notes.join('; ')}` }))
+      report.hidden = !report.children.length
+      $('sqlText').value = data.sql
+      $('sqlDialog').showModal()
+      barError('')
+    } catch (err) {
+      barError(`The tool is not answering (${err.message}). Is the window running "npm run link-tool" still open?`)
+    } finally {
+      render(true)
+    }
+  }
+  function barError(text) {
+    $('why').dataset.sticky = text ? '1' : ''
+    $('why').textContent = text
+  }
+
+  // Copy: the browser's clipboard first; the Claude app's browser pane refuses it, so then the tool copies the saved
+  // file on this PC; the button says "Copied" only when one of them worked
+  async function copySql() {
+    const note = $('copyNote')
+    let ok = false
+    try { await navigator.clipboard.writeText($('sqlText').value); ok = true } catch { /* not allowed here */ }
+    if (!ok && lastSql?.file) {
+      try {
+        const res = await fetch('/api/copy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file: lastSql.file }) })
+        ok = res.ok && (await res.json()).ok
+      } catch { /* fall through */ }
+    }
+    note.hidden = false
+    note.classList.toggle('fail', !ok)
+    if (ok) {
+      note.textContent = 'Copied. In Supabase open SQL editor → New query, paste with Ctrl+V and press Run.'
+      $('copyBtn').textContent = 'Copied'
+    } else {
+      $('sqlText').focus()
+      $('sqlText').select()
+      note.textContent = 'This browser blocked copying. The text below is selected: press Ctrl+C, or use Show in folder and open the saved file.'
+      $('copyBtn').textContent = 'Copy'
+    }
+  }
+
+  // ---- wiring ----
+  $('readBtn').addEventListener('click', read)
+  $('links').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) read() })
+  $('sqlBtn').addEventListener('click', makeSql)
+  $('copyBtn').addEventListener('click', copySql)
+  $('revealBtn').addEventListener('click', async () => {
+    if (!lastSql?.file) return
+    try { await fetch('/api/reveal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file: lastSql.file }) }) } catch { /* nothing to do */ }
+  })
+  $('downloadBtn').addEventListener('click', () => {
+    if (!lastSql) return
+    const name = (lastSql.file || 'vexn_link_import.sql').split(/[\\/]/).pop()
+    const a = el('a', { href: URL.createObjectURL(new Blob([lastSql.sql], { type: 'text/plain' })), download: name })
+    document.body.append(a); a.click(); a.remove()
+  })
+  $('closeBtn').addEventListener('click', () => $('sqlDialog').close())
+  for (const t of document.querySelectorAll('.tab')) t.addEventListener('click', () => {
+    filter = t.dataset.filter
+    for (const o of document.querySelectorAll('.tab')) o.setAttribute('aria-pressed', String(o === t))
+    render()
+  })
+  $('redraftAll').addEventListener('click', () => {
+    if (!rows.length) return
+    if (!confirm(`Rewrite the search title, search description, page description and keywords of all ${rows.length} cards with their focus keyword and the extra keywords? Text you typed in those fields is replaced.`)) return
+    redraft(rows, $('redraftAll')).finally(() => { $('redraftAll').disabled = false; $('redraftAll').textContent = 'Work keywords into all cards' })
+  })
+  $('tickReady').addEventListener('click', () => { for (const r of rows) r.include = !blocked(r) && !needsFix(r); render(); save(); recheck() })
+  $('untickAll').addEventListener('click', () => { for (const r of rows) r.include = false; render(); save() })
+  $('clearAll').addEventListener('click', () => { if (rows.length && !confirm(`Remove all ${rows.length} cards from this list? (Nothing on the site changes.)`)) return; rows = []; render(); save(); $('log').innerHTML = '' })
+  $('blur').addEventListener('change', () => { document.body.classList.toggle('blur', $('blur').checked); save() })
+  for (const id of ['pages', 'limit', 'minMinutes', 'onlyReady', 'extras']) $(id).addEventListener('change', () => { save(); recheck(0) })
+  $('tickAll').addEventListener('click', () => { for (const r of rows) r.include = true; render(); save(); recheck() })
+
+  // ---- restore the last list ----
+  const last = store.get('vexn-link-tool')
+  if (last) {
+    rows = Array.isArray(last.rows) ? last.rows : []
+    $('links').value = last.links || ''
+    if (last.settings) { $('pages').value = last.settings.pages; $('limit').value = last.settings.limit; $('minMinutes').value = last.settings.minMinutes; $('onlyReady').checked = last.settings.onlyReady === true; $('extras').value = last.settings.extras || '' }
+    if (last.blur) { $('blur').checked = true; document.body.classList.add('blur') }
+    const ch = store.get('vexn-link-tool-channels')
+    if (ch) {
+      siteMeta({ count: 0, channels: ch })
+      $('siteMeta').textContent = 'Reads Eporner and your site’s list of videos; writes nothing to the database.'
+    }
+    if (rows.length) log(`Restored ${rows.length} card${rows.length === 1 ? '' : 's'} from last time. Checking them against the site again…`)
+  }
+  render()
+  if (rows.length) recheck(0)
+})()
+</script>
+</body>
+</html>

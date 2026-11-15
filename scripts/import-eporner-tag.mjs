@@ -17,6 +17,7 @@ import { join } from 'node:path'
 import { cleanCast, mapTags, mentionsBlowjob, posterFrom, sceneTitle } from './lib/studioImport.mjs'
 import { buildTagSeoDescription, buildTagSeoTitle, buildTagSlug, buildTagTitle, dropReversedNames, tagBrand, tagExcludeReason } from './lib/tagImport.mjs'
 import { draftDescription } from './lib/movieCopy.mjs'
+import { parseListPage } from './lib/linkImport.mjs'
 import { checkContent } from '../src/lib/contentRules.js'
 import { slugify } from '../src/lib/slugify.js'
 
@@ -92,10 +93,10 @@ const freeAllowed = new Map([...tagUse].filter(([, e]) => e.n >= 3).map(([s, e])
 console.log(`site: ${movies.length} movies, ${haveCodes.size} Eporner codes, ${removed.size} removed addresses, ${freeAllowed.size} reusable free tags`)
 
 // ---- Eporner readers ----------------------------------------------------------------------------
-const parseListing = (html) => [...html.matchAll(/<div class="mb"[^>]*data-id="\d+"[\s\S]*?href="\/video-([A-Za-z0-9]+)\/[^"]*"[\s\S]*?class="mbtim"[^>]*>([^<]+)</g)]
-  .map((m) => { const p = m[2].split(':').map(Number); return { code: m[1], sec: p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1] } })
+// both "mb" and "mb hdy" (HD) items of the list's own block (until 13 Nov 2026 the HD ones were skipped)
+const parseListing = (html) => parseListPage(html).items
 async function listingPage(sort, page) {
-  const key = `${TAG}|${sort}|${page}`
+  const key = `v2|${TAG}|${sort}|${page}`
   if (!cache.listing[key]) {
     const { data } = await http(`https://www.eporner.com/tag/${TAG}/${sort}/${page > 1 ? page + '/' : ''}`)
     cache.listing[key] = data ? parseListing(data) : []

@@ -699,3 +699,119 @@ sample-data/
 - **Watch button.** The header and the homepage show only "Watch Indian movies" for everyone (`src/components/WatchShortcut.jsx`).
   The personalised "Continue watching" and "More <favourite>" buttons were removed at the owner's request, together with the record of
   the last video that fed them; the old record is deleted from a visitor's browser on their next visit.
+
+## 35. Linked intros, keyword copy, crawlable pagination and page schema (2026-11-11)
+
+- **Links in intros.** Channel intros, performer bios and category intros can link other VEXN pages as
+  `[words](/category/milf)` (`src/lib/introLinks.js`, `src/components/IntroText.jsx`). Only paths on this site become links.
+  A blank line starts a paragraph: the first shows above the videos, the rest below them under "About <name>". Search
+  descriptions use the plain words. The admin editor (Site content) explains the format and allows 1,800 characters.
+- **Copy lives in the repo.** `scripts/data/channel-intros.mjs` (18 channels), `scripts/data/performer-bios.mjs` (34 performers)
+  and `scripts/data/category-descriptions.mjs` (56 categories) are the source. `npm run seed-copy` and
+  `npm run seed-categories` check them (links, content rules, superlatives, counts, lengths; `scripts/lib/copyRules.mjs`) and
+  write `supabase/migrations/023_seed_site_copy.sql` and `010_seed_category_descriptions.sql`.
+  `npm run check:copy` checks every link against the live catalogue (indexed pages only). `npm run dev` shows the repo copy in
+  place of the database (`src/lib/localCopy.js`; not in production builds; `VITE_LOCAL_COPY=off` turns it off).
+  Deploy order: push the code, then apply 019 (search-title column), 021 (page_copy table) and 022 (search-description
+  column) — all three already applied live — then 010 and 023, then rebuild once so the prerendered pages carry the new copy
+  (older code would show the link syntax as text).
+- **Keywords.** Owner decision 2026-11-11: "free" (VEXN costs nothing), "HD" where most videos are, and "watch/stream" are
+  used in titles and copy ("Free Brazzers Porn Videos and Full Scenes", "Desi Bhabhi Sex Videos – Free Hindi Bhabhi Clips");
+  superlatives and "exclusive" stay out. Generated movie copy keeps the stricter list in `scripts/lib/movieCopy.mjs`.
+- **Studio names as tags** (`bangbros`, `adult-time`, `tushy`, `nubile-films`, ...) joined `LABEL_TAGS`: their category pages
+  only repeated the channel pages, so they leave the index and the sitemap.
+- **Pagination** (`src/components/Pagination.jsx`) renders real links (`?page=2`), so crawlers can follow them; a plain click
+  still changes page without a reload. A prerendered list answers `?page=N` with page 1's file, so the edge rewrites its
+  canonical, `og:url` and robots tags for page 2 and on: `taxonomy-gate.js` for performer/category/channel pages and the new
+  `paged-lists.js` for `/movies` and `/new` (`pagedCopy` in `netlify/edge-functions/lib/gate-common.js`).
+- **Headings and schema.** Video grids have their own H2 ("Newest Brazzers videos") with H3 cards; the age screen's title is no
+  longer a heading in every page. Performer, category and channel pages and the three list pages emit a schema.org
+  CollectionPage + ItemList (`src/lib/collectionJsonLd.js`). The list pages have linked intros and section headings.
+- Tests: `scripts/test-intro-links.mjs`, `scripts/test-page-seo.mjs`, new cases in `test-taxonomy-gate.mjs` and `test-indexing.mjs`.
+
+## 36. Search titles for channels and performers, the article editor, removed videos (2026-11-11)
+
+- **Search titles.** Migration 019 adds an optional `seo_title` to `channel_descriptions` and `performer_descriptions`
+  (applied live early: it changes nothing for code that does not read it). Admin > Site content shows it above the intro;
+  empty means "Free <name> Porn Videos and Full Scenes" (channel) or "… and Scenes" (performer). The pages read these rows
+  with `select('*')`, so they work with or without the column. Seeded titles: `CHANNEL_SEO_TITLES` in
+  `scripts/data/channel-intros.mjs` (written by `npm run seed-copy` into migration 023 as single-row updates, so a title set
+  in the admin for another page is never cleared).
+- **Search descriptions** (2026-11-15). Migration 022 (applied live) adds an optional `seo_description` (140-160
+  characters, plain text) to `channel_descriptions` and `performer_descriptions`, edited in Admin > Site content between
+  the search title and the intro. A page uses it as its meta description (in the browser and in the built HTML); empty
+  means the first 160 characters of the intro, as before. Seeded: `CHANNEL_SEO_DESCRIPTIONS` (the 8 channels with their
+  own search titles) and `PERFORMER_SEO_DESCRIPTIONS` (none yet), checked by `npm run seed-copy` and written into
+  migration 023 as single-row updates.
+- **Articles.** `/admin/article` lists every article, opens one to edit (`?slug=`), and writes new ones: HTML body with
+  insert buttons (H2, H3, list, link, image, quote, table), a live preview, SEO advice (words, H2 sections, links to VEXN
+  pages, image alt text, title and description lengths), draft or published, and the content rules. The body is cleaned with
+  DOMPurify before saving and again in the browser (`src/lib/articleHtml.js`): scripts, event handlers, iframes, forms and
+  style attributes are removed and a body `<h1>` becomes `<h2>`. The build (Node, no DOM) serves the stored HTML, which the
+  admin already cleaned. Article bodies have their own styles (`.article-body`).
+- **Schema.** On performer, category and channel pages the CollectionPage lists the first page's videos as VideoObjects
+  (title, `PT<n>M` runtime, thumbnail, upload date); the build keeps `created_at` for those 20 videos.
+- **Removed videos.** 59 videos whose source deleted them were removed on 2026-11-11 (`removed_movies`: 31 redirect to the
+  main performer page, 28 answer 410). Backup and restore SQL are in the owner's Downloads folder.
+- **Importer fix** (`scripts/import-eporner-source.mjs --kind=pornstar`): the performer is kept in the cast (and a video
+  Eporner does not credit to them is skipped), the performer's name is no longer added as a tag, the search title ends with
+  the studio or the first category instead of the name, and a video from a studio with a VEXN channel goes into that
+  channel. The 13 videos the 2026-11-01 run had broken were repaired.
+- **Site pages** (2026-11-13). The home page and the /categories, /channels and /actors lists read their heading, search
+  title, search description and intro from the table `page_copy` (migration 021, applied), edited in Admin > Site content >
+  Site pages. `src/lib/pageCopy.js` holds the built-in wording, used for any empty field or missing row; the build puts the
+  row into each page's HTML. Migration 023 (from `npm run seed-copy`) inserts the built-in wording only for pages without a
+  row, so text edited in the admin is never overwritten.
+
+## 37. Link tool: paste an Eporner link, get the insert script (2026-11-13)
+
+`npm run link-tool` starts a small app on this PC (http://localhost:5190, opens by itself; `--no-open`, `--port=`).
+Paste one or more Eporner links: a video (`/video-…`, `/hd-porn/…`, `/embed/…`), a playlist
+(`/profile/<user>/playlist/<id>/<name>/`), an uploader (`/profile/<user>/`), a tag, a performer, a channel, a category or a
+search. Each new video becomes a card with every column of `movies` drafted: title, address, search title (30-53),
+search description (140-160), page description (200-450), tags, performers, channel, keywords, poster, player. Edit
+anything; the counters and checks update as you type. Tick the videos to add and press **Make SQL**: one insert
+(`on conflict (slug) do nothing`) to run in the Supabase SQL editor, also saved as `Downloads/vexn_link_import_<time>.sql`.
+
+- **Copy** in the script window tries the browser's clipboard and, when that is refused (the browser pane in the Claude
+  app refuses it), copies the saved file on this PC; it only says "Copied" when one of them worked. **Show in folder**
+  opens Downloads with the file selected. A Make SQL error is shown next to the button and the card to fix is scrolled
+  into view.
+- **The tool drafts, it does not decide** (owner, 14 Nov 2026): every drafted video is ticked, and every ticked one goes
+  into the SQL. The SQL gets a **second check by Claude** before it is run: whatever the checks found is written above
+  each row as a `-- CHECK <title> [code]: …` line (site rules start with `RULE`), and the header counts them. Card states
+  say what that check will look at: **Ready**; **Check the notes** (information); **Needs fixing** (lengths, wording
+  another video uses, no working poster, review words such as family/teacher/sleeping, the importers' family guard,
+  out-of-scope content, compilations); **Site rule – check** (the site's block rules: teen, school and age wording,
+  non-consent, forced, leaked or hidden camera, step-family/incest, virgin, hypnosis). The option **Tick only ready
+  videos** brings back the old default (only cards with nothing to check, no blowjob videos).
+- Faults that would break a row or make the database skip it are mended in the SQL, and noted: an empty or invalid
+  address is rebuilt from the title, an address the site or the list already uses gets the Eporner code added, an empty
+  title takes the source's, an empty channel becomes VEXN.
+- Read-only: it reads Eporner and the site's catalogue with the public key and never writes to the database.
+- It needs the internet (Eporner and Supabase); "offline" means it runs on this PC, not on the site.
+- Left out before drafting: videos already on the site, and list videos a minute or more under the minimum length.
+- A video Eporner files under Teens is drafted with neutral wording (no teen-type word in any field).
+- Channel: a studio channel the site already has, AI Movie for an AI video (Eporner category "ai" or "AI"/"AI-Generated"
+  in the title; tag "AI Generated", title "… – AI Generated (N Min)", address ending "-ai-generated"), JAV Movies for a
+  Japanese film named by its product code, else VEXN.
+- Eporner's own categories and tags are checked against the site's block rules too: a video it files under "stepmom" (or
+  another step-family, forced, non-consent or hidden-camera theme) gets a RULE note however it is reworded; Indonesian
+  and Malay in-law/step words (mertua, menantu, tiri, ipar) count as step-family. Teens is the exception (neutral wording).
+- The list of cards is kept in the browser (localStorage) until **Clear list**, so a closed tab loses nothing.
+- **Focus keyword** (each card): the phrase the video should be found by, suggested as performer + main tag ("Lucy Li
+  big tits"), a JAV film's code, or "free <tag> video". The draft puts it at the start of the search title and in the
+  search description, the page description, the address and the keywords.
+- **Extra keywords** (options panel, comma-separated, e.g. "free HD porn, full video"): worked into the search title or
+  description where they fit, added to the keywords, and to the page description as "Related searches: …".
+- **Work keywords in** (each card) or **Work keywords into all cards** rewrites the search title, search description,
+  page description and keywords from the card's current fields; the address follows unless you typed your own.
+- **SEO checklist** (each card, live): focus keyword in the search title / at its start / in the search description /
+  page description / address / keywords, a performer in the search title, "free" or "watch" in the search description,
+  the three lengths, not used by another video, and one line per extra keyword showing where it appears.
+- Logic and tests: `scripts/lib/linkImport.mjs`, `scripts/test-link-import.mjs` (in `npm test`); server and page in
+  `scripts/link-tool/`.
+
+The list reader in `scripts/lib/linkImport.mjs` is shared with the importers. Before 13 Nov 2026 the tag, studio and
+source importers matched only `class="mb"` items and so skipped every HD video (`class="mb hdy"`) of a list; a tag page
+gave 29 of its 65 videos. Their cache keys now start with `v2|`, so old cached lists are read again.

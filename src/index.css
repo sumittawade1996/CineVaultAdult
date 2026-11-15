@@ -402,6 +402,40 @@ ol, ul { margin: 0; padding: 0; list-style: none; }
 .article-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 4px; color: var(--text-muted); font-size: 13px; }
 .article-date { margin-top: 8px; color: var(--text-faint); font-size: 12px; }
 
+/* article bodies: HTML written in the admin (src/pages/AdminArticle.jsx) */
+.article-body { color: var(--text); line-height: 1.8; font-size: 16px; overflow-wrap: anywhere; }
+.article-body > * + * { margin-top: 1em; }
+.article-body h2 { font-family: var(--font-display); font-size: clamp(21px, 2.4vw, 26px); line-height: 1.25; margin-top: 1.8em; }
+.article-body h3 { font-size: 18px; line-height: 1.3; margin-top: 1.4em; }
+.article-body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.article-body ul, .article-body ol { padding-left: 1.4em; }
+.article-body li + li { margin-top: 0.35em; }
+.article-body blockquote { margin-left: 0; padding: 4px 0 4px 16px; border-left: 3px solid var(--accent); color: var(--text-muted); }
+.article-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); }
+.article-body figure { margin: 1.4em 0; }
+.article-body figcaption { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+.article-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 14px; }
+.article-body th, .article-body td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+.article-body code { font-family: var(--font-mono); font-size: 0.92em; }
+.admin-article-list { margin: 0 0 24px; }
+.admin-article-list ul { margin: 8px 0 0; padding-left: 18px; columns: 2 280px; }
+.admin-article-list .linklike { background: none; border: 0; padding: 0; color: var(--text); text-decoration: underline; cursor: pointer; font: inherit; text-align: left; }
+.admin-article-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.admin-article-html { width: 100%; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; }
+.admin-article-preview { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px 20px; min-height: 320px; }
+.admin-article-advice { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; display: grid; gap: 4px; }
+.admin-article-advice .ok { color: var(--text-muted); }
+.admin-article-advice .warn { color: var(--accent); }
+
+/* heading above a video grid (taxonomy pages, /movies) */
+.grid-heading { font-family: var(--font-display); font-size: clamp(18px, 2vw, 22px); margin: 8px 0 14px; }
+
+/* links inside hand-written intros (src/lib/introLinks.js) */
+.taxonomy-intro a, .taxonomy-about a { color: var(--text); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.taxonomy-intro a:hover, .taxonomy-about a:hover { color: var(--accent); }
+.taxonomy-about { max-width: 72ch; margin: 40px 0 8px; }
+.taxonomy-about h2 { font-family: var(--font-display); font-size: clamp(18px, 2vw, 22px); margin-bottom: 12px; }
+.taxonomy-about p { color: var(--text-muted); font-size: 15px; line-height: 1.6; margin: 0 0 12px; }
 .taxonomy-faq { max-width: 72ch; margin: 40px 0 8px; }
 .taxonomy-faq h2 { font-family: var(--font-display); font-size: clamp(18px, 2vw, 22px); margin-bottom: 12px; }
 .taxonomy-faq details { border-top: 1px solid var(--line); padding: 12px 0; }
@@ -775,7 +809,7 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
   transition: filter 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
 .btn:hover { filter: brightness(1.08); }
-.btn:disabled { opacity: 0.45; cursor: default; filter: none; }
+.btn:disabled, .btn.is-disabled { opacity: 0.45; cursor: default; filter: none; }
 .btn-outline {
   background: transparent;
   border-color: var(--line-strong);
@@ -1049,6 +1083,11 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 13px;
+  /* links since 2026-11: same box as the old buttons */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 .pagination-page:hover { color: var(--text); background: var(--surface); }
 .pagination-page.is-current { background: var(--accent); color: #1a1204; font-weight: 700; cursor: default; }
@@ -1164,7 +1203,7 @@ dialog.age-gate {
 dialog.age-gate::backdrop { background: rgba(6, 7, 9, 0.92); }
 .age-gate-brand { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.06em; margin-bottom: 16px; }
 .age-gate-brand span { color: var(--accent); }
-.age-gate h2 { font-size: 19px; margin: 0 0 14px; }
+.age-gate .age-gate-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; line-height: 1.25; color: var(--text); margin: 0 0 14px; }
 .age-gate p { color: var(--text-muted); font-size: 13.5px; line-height: 1.6; margin: 0 0 14px; text-align: left; }
 .age-gate a { color: var(--accent); }
 .age-gate-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }

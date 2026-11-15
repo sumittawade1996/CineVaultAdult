@@ -8,6 +8,8 @@ import assert from 'node:assert/strict'
 
 const PRERENDERED = '<html><body>page <script>window.__VEXN_PRELOAD__={}</script></body></html>'
 const SHELL = '<html><body>SHELL</body></html>'
+// a prerendered page with the head tags the app writes (react-helmet puts data-rh first)
+const WITH_HEAD = '<html><head><link data-rh="true" rel="canonical" href="https://vexn.org/category/milf"/><meta data-rh="true" property="og:url" content="https://vexn.org/category/milf"/><meta data-rh="true" name="robots" content="index, follow"/></head><body>page <script>window.__VEXN_PRELOAD__={}</script></body></html>'
 
 const state = { known: {}, down: false, calls: [] }
 
@@ -27,14 +29,14 @@ globalThis.fetch = async (input) => {
 }
 
 let n = 0
-async function run({ path, next = 'shell', known = {}, down = false }) {
+async function run({ path, next = 'shell', known = {}, down = false, fn = 'taxonomy-gate' }) {
   Object.assign(state, { known, down, calls: [] })
-  const mod = await import(`../netlify/edge-functions/taxonomy-gate.js?case=${++n}`)
+  const mod = await import(`../netlify/edge-functions/${fn}.js?case=${++n}`)
   const request = new Request(`https://vexn.org${path}`)
   const context = {
     next: async () => {
       if (next === 'redirect') return new Response(null, { status: 301, headers: { location: '/article/new-slug' } })
-      return new Response(next === 'prerendered' ? PRERENDERED : SHELL, { status: 200, headers: { 'content-type': 'text/html' } })
+      return new Response(next === 'prerendered' ? PRERENDERED : next === 'with-head' ? WITH_HEAD : SHELL, { status: 200, headers: { 'content-type': 'text/html', 'content-length': '999' } })
     },
   }
   const res = await mod.default(request, context)
@@ -100,6 +102,33 @@ test('a redirect from netlify.toml is passed through untouched', async () => {
 test('Supabase down: the shell is served with 200 (fail open), not a wrong 404', async () => {
   const { res } = await run({ path: '/actor/someone', down: true })
   assert.equal(res.status, 200)
+})
+
+test('?page=2 of a prerendered page: canonical and og:url point at page 2, robots says noindex', async () => {
+  const { res, text } = await run({ path: '/category/milf?page=2', next: 'with-head' })
+  assert.equal(res.status, 200)
+  assert.ok(text.includes('rel="canonical" href="https://vexn.org/category/milf?page=2"'), text)
+  assert.ok(text.includes('property="og:url" content="https://vexn.org/category/milf?page=2"'))
+  assert.ok(text.includes('name="robots" content="noindex, follow"'))
+  assert.equal(res.headers.get('content-length'), null, 'the old length would cut the page')
+  assert.equal(lookups().length, 0)
+})
+
+test('?page=1, a bad page value and no page leave the prerendered head as it is', async () => {
+  for (const q of ['?page=1', '?page=abc', '?utm_source=x', '']) {
+    const { text } = await run({ path: '/category/milf' + q, next: 'with-head' })
+    assert.equal(text, WITH_HEAD, q)
+  }
+})
+
+test('paged-lists: /movies?page=3 gets the same rewrite; without ?page the function stays out of the way', async () => {
+  const paged = await run({ path: '/movies?page=3', next: 'with-head', fn: 'paged-lists' })
+  assert.ok(paged.text.includes('category/milf?page=3"'))
+  assert.ok(paged.text.includes('content="noindex, follow"'))
+  const plain = await run({ path: '/movies', next: 'with-head', fn: 'paged-lists' })
+  assert.equal(plain.res, undefined)
+  const shell = await run({ path: '/new/2026-w44?page=2', next: 'shell', fn: 'paged-lists' })
+  assert.equal(shell.text, SHELL, 'a page that was not prerendered is passed on unchanged')
 })
 
 test('paths that are not ours are left to Netlify', async () => {

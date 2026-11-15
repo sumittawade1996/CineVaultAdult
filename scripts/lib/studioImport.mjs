@@ -49,9 +49,10 @@ const BLOWJOB = /blow\s?jobs?|blow ?bang\w*|\bbj\b|\bblowie\b|\bsuck(?:s|ed|ing)
 const NOT_A_STUDIO = /\b(?:homemade|webcam|onlyfans|selfie|self ?shot|hidden ?cam\w*|spy ?cam\w*|leaked|vlog|reddit|tiktok|snapchat|sri ?lankan|desi|indian|bhabhi|tamil|telugu|hindi|mallu|aunty|pakistani|bangladeshi|hijab)\b/i
 // Another studio named in the title: the upload is a mix-up or a re-upload under the wrong name
 const OTHER_STUDIO = /\b(?:naughty ?america|reality ?kings|mofos|blacked(?:raw)?|tushy(?:raw)?|digital ?playground|team ?skeet|evil ?angel|girlsway|girlfriends ?films|pure ?taboo|nubiles|met-?art|x-?art|21 ?sextury|jules ?jordan|fakehub|public ?agent|burning ?angel|hardx|lethal ?hardcore|pornpros|passion-?hd|sweet ?sinner|dogfart|new ?sensations|spizoo|exploited ?college|casting ?couch|net ?video ?girls)\b/i
-const EXTRA_BLOCK = /\b(?:famil(?:y|ies)|cheerlead\w*|high ?school\w*|school\w*|campus|dorm|freshman|sophomore|babysit\w*|nanny|innocent|just turned|young(?:er)?|jailbait|daddy|prom|homework|classmate|tutor|nerd)\b/i
-const OFF_SCOPE = /\b(?:gay|trans(?:gender|sexual)?|shemale|tranny|ladyboy|crossdress\w*|femboy|sissy)\b/i
-const COMPILATION = /\b(?:compilation|cumpilation\w*|best of|collection|top \d+|megamix|pmv|montage|highlights|marathon)\b/i
+// (also used by the link tool, scripts/lib/linkImport.mjs)
+export const EXTRA_BLOCK = /\b(?:famil(?:y|ies)|cheerlead\w*|high ?school\w*|school\w*|campus|dorm|freshman|sophomore|babysit\w*|nanny|innocent|just turned|young(?:er)?|jailbait|daddy|prom|homework|classmate|tutor|nerd)\b/i
+export const OFF_SCOPE = /\b(?:gay|trans(?:gender|sexual)?|shemale|tranny|ladyboy|crossdress\w*|femboy|sissy)\b/i
+export const COMPILATION = /\b(?:compilation|cumpilation\w*|best of|collection|top \d+|megamix|pmv|montage|highlights|marathon)\b/i
 
 export const mentionsBlowjob = (text) => BLOWJOB.test(String(text || ''))
 
