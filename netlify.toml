@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
+# After each production deploy, tell IndexNow (Bing and the engines that share it) which pages the deploy added,
+# changed or removed: the live sitemap before the build against the one the build wrote. Never blocks a deploy.
+# See netlify/plugins/indexnow/index.js.
+[[plugins]]
+  package = "/netlify/plugins/indexnow"
+
 # Posters are hotlinked from these hosts and served through Netlify Image
 # CDN (see src/lib/poster.js), which only proxies allow-listed origins.
 [images]

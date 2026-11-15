@@ -815,3 +815,16 @@ anything; the counters and checks update as you type. Tick the videos to add and
 The list reader in `scripts/lib/linkImport.mjs` is shared with the importers. Before 13 Nov 2026 the tag, studio and
 source importers matched only `class="mb"` items and so skipped every HD video (`class="mb hdy"`) of a list; a tag page
 gave 29 of its 65 videos. Their cache keys now start with `v2|`, so old cached lists are read again.
+
+## 38. IndexNow after every deploy (2026-11-15)
+
+A local Netlify build plugin (`netlify/plugins/indexnow`, registered in `netlify.toml`) announces each production deploy
+to IndexNow (Bing and the engines that share it; Google ignores IndexNow and reads the sitemap). Before the build it reads
+the sitemap that is live on vexn.org; after the deploy is live it compares that with the sitemap the build wrote and POSTs
+only the difference: new pages, pages whose `lastmod` day changed, and pages that left the sitemap (removed videos, pages
+no longer indexed). Deploy previews and branch deploys send nothing, and the plugin never fails or blocks a deploy.
+The result is in the Netlify deploy log and summary ("IndexNow: sent N pages (… new, … changed, … removed): HTTP 202
+accepted" or "nothing to send"). Logic: `scripts/lib/indexnowDiff.mjs` (tests: `scripts/test-indexnow-diff.mjs`).
+Key file: `public/758d70ba8a930f4a7f58caa07ff763e0.txt`. The first submission was done by hand on 2026-11-15 (131
+category, channel, performer and list pages); `node scripts/promo/indexnow.mjs --since=YYYY-MM-DD --send` still works for
+a manual one. Rehearse locally with `CONTEXT=production INDEXNOW_DRY=1` and the plugin's two handlers.
