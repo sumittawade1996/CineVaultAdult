@@ -10,6 +10,7 @@ import IntroText from '../components/IntroText'
 import { usePageCopy } from '../lib/usePageCopy'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
+import { tileAlt } from '../lib/imageAlt'
 
 const TILE_COUNT = 20
 
@@ -83,7 +84,7 @@ export default function TaxonomyList({ field, single, copyKey, basePath, withIma
               <div className="taxonomy-tile-grid">
                 {tiles.map((item) => (
                   <Link to={`${basePath}/${item.slug}`} key={item.slug} className="taxonomy-tile">
-                    {item.poster && <img src={item.poster} alt="" loading="lazy" decoding="async" />}
+                    {item.poster && <img src={item.poster} alt={tileAlt(item.name)} loading="lazy" decoding="async" />}
                     <div className="taxonomy-tile-overlay">
                       <span>{item.name}</span>
                       <span className="taxonomy-count" aria-label={`${item.count} movies`}>{item.count}</span>

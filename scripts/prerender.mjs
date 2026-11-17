@@ -117,7 +117,6 @@ async function main() {
   const cardRows = cards.data || []
   const movieRows = fullMovies.data || []
   const articleRows = articles.data || []
-  const stripActors = ({ actors, ...card }) => card
   // Taxonomy pages carry every match in their preloaded data (the "at a glance" numbers and the
   // pagination need them). Drawing a card needs neither the uuid (the grid keys on the slug) nor the
   // creation time (the list is already in order), and the uuid does not compress, so both are left
@@ -131,19 +130,19 @@ async function main() {
 
   const routes = []
   routes.push(['/', {
-    featured: cardRows.filter((m) => m.featured).slice(0, 6).map(stripActors),
-    latest: cardRows.slice(0, 12).map(stripActors),
+    featured: cardRows.filter((m) => m.featured).slice(0, 6),
+    latest: cardRows.slice(0, 12),
     articles: articleRows.slice(0, 3).map(({ id, slug, title, excerpt, cover_image_url }) => ({ id, slug, title, excerpt, cover_image_url })),
     pageCopy: pageCopy.get('home') ?? null,
   }])
-  routes.push(['/movies', { movies: cardRows.slice(0, MOVIES_PAGE_SIZE).map(stripActors), total: cardRows.length }])
+  routes.push(['/movies', { movies: cardRows.slice(0, MOVIES_PAGE_SIZE), total: cardRows.length }])
   // "New" pages: the latest additions and one archive per ISO week.
   const weeks = summarizeWeeks(cardRows.map((m) => m.created_at))
   const weeksShown = weeks.slice(0, NEW_WEEKS_SHOWN)
-  routes.push(['/new', { movies: cardRows.slice(0, NEW_LATEST_COUNT).map(stripActors), total: Math.min(NEW_LATEST_COUNT, cardRows.length), weeks: weeksShown }])
+  routes.push(['/new', { movies: cardRows.slice(0, NEW_LATEST_COUNT), total: Math.min(NEW_LATEST_COUNT, cardRows.length), weeks: weeksShown }])
   for (const w of weeks) {
     const inWeek = cardRows.filter((m) => weekKey(m.created_at) === w.key)
-    routes.push([`/new/${w.key}`, { movies: inWeek.slice(0, MOVIES_PAGE_SIZE).map(stripActors), total: inWeek.length, weeks: weeksShown }])
+    routes.push([`/new/${w.key}`, { movies: inWeek.slice(0, MOVIES_PAGE_SIZE), total: inWeek.length, weeks: weeksShown }])
   }
   routes.push(['/articles', { articles: articleRows.slice(0, ARTICLES_PAGE_SIZE), total: articleRows.length }])
   // Static compliance pages carry no Supabase data — the route alone is
@@ -172,7 +171,7 @@ async function main() {
   for (const movie of movieRows) {
     if (!movie.slug) continue
     // Same pick the browser makes (src/pages/MovieDetail.jsx loadRelated).
-    const related = pickRelated(movie, selectCandidates(movie, cardRows)).map(stripActors)
+    const related = pickRelated(movie, selectCandidates(movie, cardRows))
     routes.push([`/movie/${movie.slug}`, { movie, related }])
   }
   for (const article of articleRows) {

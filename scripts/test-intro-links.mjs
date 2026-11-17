@@ -8,6 +8,11 @@ const cases = [
   () => assert.deepEqual(introLinkPaths('[a](/category/big-tits), [b](/channel/brazzers) and [c](/channels)'), ['/category/big-tits', '/channel/brazzers', '/channels']),
   () => assert.deepEqual(introLinkPaths('[week](/new/2026-w41) [scene](/movie/some-scene-2)'), ['/new/2026-w41', '/movie/some-scene-2']),
   () => assert.deepEqual(introParts('[MILF](/category/milf/)'), [{ text: 'MILF', to: '/category/milf' }]), // a trailing slash is dropped
+  // a full address on this site counts as its path
+  () => assert.deepEqual(introParts('Browse more [MILF Videos](https://vexn.org/category/milf).'), [{ text: 'Browse more ' }, { text: 'MILF Videos', to: '/category/milf' }, { text: '.' }]),
+  () => assert.deepEqual(introParts('[Lena Paul](https://www.vexn.org/actor/lena-paul/)'), [{ text: 'Lena Paul', to: '/actor/lena-paul' }]),
+  () => assert.deepEqual(introParts('[x](https://vexn.org.example.com/category/milf)'), [{ text: 'x' }]), // look-alike host stays text
+  () => assert.equal(plainIntro('Browse more [MILF Videos](https://vexn.org/category/milf) here.'), 'Browse more MILF Videos here.'),
   // anything that is not a page of this site keeps its words and is not a link
   () => assert.deepEqual(introParts('[Eporner](https://www.eporner.com/)'), [{ text: 'Eporner' }]),
   () => assert.deepEqual(introParts('[x](javascript:alert(1))').filter((p) => p.to), []),

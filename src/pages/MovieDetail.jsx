@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slugify'
 import { toEmbedUrl } from '../lib/video'
 import { getPosterUrl, IMAGE_CDN, optimizedPosterUrl, posterSrcSet } from '../lib/poster'
+import { posterAlt } from '../lib/imageAlt'
+import { introParagraphs, plainIntro } from '../lib/introLinks'
+import IntroText from '../components/IntroText'
 import { MOVIE_CARD_FIELDS } from '../lib/movieFields'
 import { getAdminSession, isAdminUser } from '../lib/adminAuth'
 import { usePreload } from '../lib/preload'
@@ -30,7 +33,7 @@ async function loadRelated(movie) {
     candidateSpecs(movie).map((spec) => {
       let query = supabase
         .from('movies')
-        .select(`${MOVIE_CARD_FIELDS},actors`)
+        .select(MOVIE_CARD_FIELDS)
         .neq('id', movie.id)
         .order('created_at', { ascending: false })
         .order('id', { ascending: true })
@@ -41,7 +44,8 @@ async function loadRelated(movie) {
   )
   const rows = new Map()
   for (const { data } of results) for (const row of data || []) rows.set(row.id, row)
-  return pickRelated(movie, [...rows.values()]).map(({ actors, ...card }) => card) // eslint-disable-line no-unused-vars
+  // the cards keep `actors`: their poster alt text names the performers (src/lib/imageAlt.js)
+  return pickRelated(movie, [...rows.values()])
 }
 
 export default function MovieDetail() {
@@ -119,7 +123,7 @@ export default function MovieDetail() {
     '@context': 'https://schema.org',
     '@type': 'VideoObject',
     name: movie.title,
-    description: movie.description || movie.seo_description || movie.title,
+    description: plainIntro(movie.description) || movie.seo_description || movie.title,
     thumbnailUrl: original || undefined,
     // The date the source published the video; created_at is only the day we
     // imported it, so it is the fallback.
@@ -171,7 +175,7 @@ export default function MovieDetail() {
     <>
       <Seo
         title={movie.seo_title || movie.title}
-        description={movie.seo_description || movie.description}
+        description={movie.seo_description || plainIntro(movie.description)}
         image={original}
         type="video.movie"
         noindex={isHeldMovie(movie)}
@@ -187,7 +191,7 @@ export default function MovieDetail() {
                   src={useCdn ? optimizedPosterUrl(poster, 960) : poster}
                   srcSet={useCdn ? posterSrcSet(poster) : undefined}
                   sizes={useCdn ? DETAIL_SIZES : undefined}
-                  alt={`${movie.title} poster`}
+                  alt={posterAlt(movie)}
                   width="640"
                   height="360"
                   fetchpriority="high"
@@ -221,7 +225,8 @@ export default function MovieDetail() {
               )}
               {movie.source && <span title="The site that hosts the video player">Source: {movie.source}</span>}
             </div>
-            {movie.description && <p className="detail-desc">{movie.description}</p>}
+            {/* [words](/category/milf) links in the description become real links (src/lib/introLinks.js) */}
+            {movie.description && introParagraphs(movie.description).map((p) => <IntroText key={p} className="detail-desc" text={p} />)}
             {tags.length > 0 && (
               <div className="chip-row">
                 {tags.map((t) => (

@@ -1,5 +1,7 @@
-// Hand-written intros (channel intros, performer bios, category intros) can link to other VEXN pages:
+// Hand-written intros (channel intros, performer bios, category intros) and video descriptions can link to other
+// VEXN pages:
 //   [Angela White](/actor/angela-white) and [big tits videos](/category/big-tits)
+// The full address of a page on this site (https://vexn.org/category/big-tits) works too.
 // Only paths on this site become links (actor, category, channel, movie, article and weekly pages, and the
 // lists); anything else keeps its words as plain text, so a pasted outside address never becomes a link.
 // A blank line starts a new paragraph: the page shows the first one above the videos and the rest below them.
@@ -14,7 +16,8 @@ export function introParts(text) {
   let last = 0
   for (const m of s.matchAll(LINK)) {
     if (m.index > last) parts.push({ text: s.slice(last, m.index) })
-    const to = m[2].replace(/(.)\/+$/, '$1')
+    // a full address on this site (https://vexn.org/category/milf) counts as its path; a trailing slash is dropped
+    const to = m[2].replace(/^https?:\/\/(?:www\.)?vexn\.org(?=\/)/i, '').replace(/(.)\/+$/, '$1')
     parts.push(SITE_PATH.test(to) ? { text: m[1], to } : { text: m[1] })
     last = m.index + m[0].length
   }

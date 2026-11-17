@@ -23,7 +23,8 @@ export default function Footer() {
         {partners.length > 0 && (
           <section className="footer-partners" aria-labelledby="footer-partners-title">
             <div className="footer-partners-head">
-              <h2 id="footer-partners-title">Partners</h2>
+              {/* Not a heading: a footer h2 would show up in every page's outline (SEO audit, Nov 2026). */}
+              <p id="footer-partners-title" className="footer-partners-title">Partners</p>
               <Link to="/partners">All partners →</Link>
             </div>
             <ul>

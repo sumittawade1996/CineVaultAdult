@@ -828,3 +828,24 @@ accepted" or "nothing to send"). Logic: `scripts/lib/indexnowDiff.mjs` (tests: `
 Key file: `public/758d70ba8a930f4a7f58caa07ff763e0.txt`. The first submission was done by hand on 2026-11-15 (131
 category, channel, performer and list pages); `node scripts/promo/indexnow.mjs --since=YYYY-MM-DD --send` still works for
 a manual one. Rehearse locally with `CONTEXT=production INDEXNOW_DRY=1` and the plugin's two handlers.
+
+## 39. Image alt text (2026-11-18)
+
+Every image now has alt text, built only from what the row really has (`src/lib/imageAlt.js`, tests:
+`scripts/test-image-alt.mjs`); nothing describes the picture itself.
+
+- Video cards (`MovieCard`): performers, the main category and the studio channel, e.g. "Lena Paul and Ivy Lebelle
+  threesome video from Vixen". The card prints its title under the poster, so the title is used only when no performer
+  is credited ("Indian video from Ullu: <title>"). The catch-all VEXN channel is not named.
+- Video page poster: the title, performers not already in it, and the main category ("… – threesome video poster").
+- Category / channel / performer tiles: "<name> porn videos". Article covers: the article title.
+
+The category is always the row's first controlled category (`src/lib/categories.js`), so a free tag never reaches the
+alt text. Card data now carries `actors` (`MOVIE_CARD_FIELDS`), and the prerender no longer strips it, so the server
+HTML and the browser render the same alt text. The footer "Partners" label is a styled `<p>`, not an `<h2>`, so it no
+longer shows in every page's heading outline.
+
+Article covers (2026-11-18): most covers are thumbnails loaded from Eporner and vanish when a video is removed there.
+`src/components/ArticleCover.jsx` (home strip, /articles, article page) swaps a cover that fails to load for
+`/og-default.png`, and leaves the image out if that fails too. Three dead covers (anal, BBW, big-tits-vs-MILF explainers)
+were replaced in the database with posters of live studio scenes, and the Aylo news piece uses the default image.

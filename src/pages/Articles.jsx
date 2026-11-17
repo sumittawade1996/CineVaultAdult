@@ -5,6 +5,7 @@ import { usePreload } from '../lib/preload'
 import Seo from '../components/Seo'
 import AdSlot from '../components/AdSlot'
 import Pagination from '../components/Pagination'
+import ArticleCover from '../components/ArticleCover'
 import { formatArticleDate } from '../lib/articleDates'
 
 const PAGE_SIZE = 20
@@ -79,7 +80,7 @@ export default function Articles() {
             <div className="article-grid">
               {articles.map((a) => (
                 <Link to={`/article/${a.slug}`} className="article-card" key={a.id}>
-                  {a.cover_image_url && <img src={a.cover_image_url} alt={a.title} loading="lazy" width="640" height="360" />}
+                  {a.cover_image_url && <ArticleCover src={a.cover_image_url} alt={a.title} loading="lazy" width="640" height="360" />}
                   <div className="pad">
                     <h3>{a.title}</h3>
                     <p>{a.excerpt}</p>

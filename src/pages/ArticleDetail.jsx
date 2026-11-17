@@ -6,6 +6,7 @@ import Seo from '../components/Seo'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { breadcrumbJsonLd } from '../lib/breadcrumbs'
 import AdSlot from '../components/AdSlot'
+import ArticleCover from '../components/ArticleCover'
 import { FALLBACK_SITE_URL, SITE_NAME } from '../lib/siteConfig'
 import { formatArticleDate, isUpdated } from '../lib/articleDates'
 import { cleanArticleHtml } from '../lib/articleHtml'
@@ -96,7 +97,7 @@ export default function ArticleDetail() {
           {isUpdated(article) && <span>Updated <time dateTime={article.updated_at}>{formatArticleDate(article.updated_at)}</time></span>}
         </p>
         {article.cover_image_url && (
-          <img
+          <ArticleCover
             src={article.cover_image_url}
             alt={article.title}
             width="1200"

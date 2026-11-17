@@ -9,6 +9,7 @@ import Seo from '../components/Seo'
 import CardSkeletonGrid from '../components/CardSkeletonGrid'
 import WatchShortcut from '../components/WatchShortcut'
 import IntroText from '../components/IntroText'
+import ArticleCover from '../components/ArticleCover'
 import { usePageCopy } from '../lib/usePageCopy'
 import { SITE_NAME, SOCIAL_LINKS, FALLBACK_SITE_URL } from '../lib/siteConfig'
 
@@ -121,7 +122,7 @@ export default function Home() {
             <div className="article-grid">
               {articles.map((a) => (
                 <Link to={`/article/${a.slug}`} className="article-card" key={a.id}>
-                  {a.cover_image_url && <img src={a.cover_image_url} alt="" loading="lazy" decoding="async" width="640" height="360" />}
+                  {a.cover_image_url && <ArticleCover src={a.cover_image_url} alt={a.title} loading="lazy" decoding="async" width="640" height="360" />}
                   <div className="pad">
                     <h3>{a.title}</h3>
                     <p>{a.excerpt}</p>

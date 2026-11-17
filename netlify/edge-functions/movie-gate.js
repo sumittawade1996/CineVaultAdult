@@ -139,7 +139,9 @@ function redirectTo(request, target) {
 
 function previewResponse(movie, pathname) {
   const title = movie.seo_title || movie.title
-  const description = movie.seo_description || movie.description || `Watch ${movie.title} free on ${SITE_NAME}.`
+  // a description may hold [words](/category/milf) links (src/lib/introLinks.js): previews show the words only
+  const plainDescription = String(movie.description || '').replace(/\[([^[\]\n]{1,90})\]\(([^()\s]{1,200})\)/g, '$1').trim()
+  const description = movie.seo_description || plainDescription || `Watch ${movie.title} free on ${SITE_NAME}.`
   const card = cardImage(posterUrl(movie))
   const image = card.url || DEFAULT_OG_IMAGE
   const size = card.url && card.width && card.height

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PosterPlaceholder from './PosterPlaceholder'
 import { getPosterUrl, IMAGE_CDN, optimizedPosterUrl, posterSrcSet } from '../lib/poster'
+import { cardAlt } from '../lib/imageAlt'
 
 // Card widths across the breakpoints in index.css, so the browser can pick
 // the smallest optimized poster that still fills the box on its DPR.
@@ -35,7 +36,7 @@ export default function MovieCard({ movie, priority = false, first = false, head
             src={useCdn ? optimizedPosterUrl(poster, 480) : poster}
             srcSet={useCdn ? posterSrcSet(poster) : undefined}
             sizes={useCdn ? (featured ? FEATURED_SIZES : CARD_SIZES) : undefined}
-            alt=""
+            alt={cardAlt(movie)}
             width="640"
             height="360"
             loading={priority ? 'eager' : 'lazy'}

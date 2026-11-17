@@ -1121,7 +1121,7 @@ a.chip:hover { border-color: var(--accent-dim); color: var(--text); }
 .footer-links a:hover { color: var(--text); }
 .footer-partners { width: 100%; order: 9; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; }
 .footer-partners-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.footer-partners h2 { color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 600; }
+.footer-partners-title { margin: 0; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 600; }
 .footer-partners-head a { font-size: 12px; color: var(--text-muted); }
 .footer-partners-head a:hover, .footer-partners li a:hover { color: var(--text); }
 .footer-partners ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 24px; }
